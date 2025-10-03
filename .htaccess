@@ -1,0 +1,6 @@
+Options -Indexes
+AddDefaultCharset utf-8
+
+# In future we can add rewrites. For now, default to index.php.
+DirectoryIndex index.php
+

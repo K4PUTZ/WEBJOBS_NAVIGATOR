@@ -1,0 +1,22 @@
+# Credentials and secrets
+credentials.json
+*.key
+*.pem
+.env
+
+# Composer dependencies
+vendor/
+composer.lock
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
