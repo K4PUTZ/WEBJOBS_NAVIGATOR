@@ -4,3 +4,12 @@ AddDefaultCharset utf-8
 # In future we can add rewrites. For now, default to index.php.
 DirectoryIndex index.php
 
+# Disable caching for development files
+<FilesMatch "\.(css|js)$">
+    ExpiresActive Off
+    Header unset ETag
+    Header set Cache-Control "max-age=0, no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "Wed, 11 Jan 1984 05:00:00 GMT"
+</FilesMatch>
+

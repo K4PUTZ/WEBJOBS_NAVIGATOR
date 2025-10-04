@@ -69,7 +69,7 @@
     let arr = getRecents();
     arr = arr.filter(s => s !== sku);
     arr.unshift(sku);
-    if (arr.length > 10) arr = arr.slice(0, 10);
+    if (arr.length > 20) arr = arr.slice(0, 20);
     localStorage.setItem('wjn_recents', JSON.stringify(arr));
     renderRecents();
   }
@@ -215,40 +215,80 @@
   }
 
   async function handleClipboardScan() {
-    const text = await readClipboard();
-    if (!text) return;
-    log('Clipboard read. Detecting SKUs…');
+    log('Starting clipboard scan...', 'info');
     
-    // Use server-side detection for accuracy
-    const result = await detectSkusFromText(text);
-    
-    if (!result.first) { 
-      log('No SKU found in clipboard.', 'warning'); 
-      return; 
-    }
-    
-    const sku = result.first.sku;
-    setCurrentSku(sku);
-    addRecent(sku);
-    log('SKU detected: ' + sku, 'sku');
-    
-    // Log additional SKUs if found
-    if (result.matches.length > 1) {
-      log(`Found ${result.matches.length} SKUs total. Additional: ${result.matches.slice(1).map(m => m.sku).join(', ')}`, 'info');
-      // Add multiple SKUs to recents
-      result.matches.slice(1, 8).forEach(match => addRecent(match.sku));
+    try {
+      const text = await readClipboard();
+      if (!text) {
+        log('No text found in clipboard.', 'warning');
+        return;
+      }
+      
+      log('Clipboard read. Detecting SKUs…');
+      
+      // Use server-side detection for accuracy
+      const result = await detectSkusFromText(text);
+      
+      if (!result.first) { 
+        log('No SKU found in clipboard.', 'warning'); 
+        return; 
+      }
+      
+      const sku = result.first.sku;
+      setCurrentSku(sku);
+      addRecent(sku);
+      log('SKU detected: ' + sku, 'sku');
+      
+      // Log additional SKUs if found
+      if (result.matches.length > 1) {
+        log(`Found ${result.matches.length} SKUs total. Additional: ${result.matches.slice(1).map(m => m.sku).join(', ')}`, 'info');
+        // Add multiple SKUs to recents
+        result.matches.slice(1, 8).forEach(match => addRecent(match.sku));
+      }
+    } catch (error) {
+      log('Error during clipboard scan: ' + error.message, 'error');
     }
   }
 
   function initKeys() {
     document.addEventListener('keydown', (e) => {
       // F9 to check clipboard
-      if (e.key === 'F9') { e.preventDefault(); handleClipboardScan(); return; }
-      // Try F1..F8 (may be blocked). Also support Alt+1..8 as reliable fallback.
+      if (e.key === 'F9') { 
+        e.preventDefault(); 
+        console.log('F9 pressed, triggering clipboard scan');
+        handleClipboardScan(); 
+        return; 
+      }
+      // Try F1..F8 (may be blocked). Also support 1..8 as reliable fallback.
       const favIndexByFunction = ({F1:0,F2:1,F3:2,F4:3,F5:4,F6:5,F7:6,F8:7})[e.key];
       if (favIndexByFunction !== undefined) { e.preventDefault(); openFavorite(favIndexByFunction); return; }
-      if (e.altKey && /^[1-8]$/.test(e.key)) { e.preventDefault(); openFavorite(parseInt(e.key,10)-1); return; }
+      // Use number keys 1-8 directly (no Alt needed)
+      if (!e.ctrlKey && !e.altKey && !e.metaKey && /^[1-8]$/.test(e.key)) { e.preventDefault(); openFavorite(parseInt(e.key,10)-1); return; }
     });
+  }
+
+  function adjustConsoleHeight() {
+    const consoleCard = $('#consoleCard');
+    const consoleHeader = $('.console-header');
+    const consoleFooter = $('.console-footer');
+    const consoleEl = $('#console');
+    
+    if (!consoleCard || !consoleHeader || !consoleFooter || !consoleEl) return;
+    
+    // Get the total height of the console card
+    const cardHeight = consoleCard.clientHeight;
+    
+    // Calculate the height used by header, footer, and padding
+    const headerHeight = consoleHeader.offsetHeight;
+    const footerHeight = consoleFooter.offsetHeight;
+    const cardPadding = 20; // 10px top + 10px bottom padding from .card
+    const margins = 20; // 10px margin-bottom on header + 10px margin-top on footer
+    
+    // Calculate available height for console
+    const availableHeight = cardHeight - headerHeight - footerHeight - cardPadding - margins;
+    
+    // Set the console height
+    consoleEl.style.height = Math.max(200, availableHeight) + 'px';
   }
 
   function init() {
@@ -256,9 +296,26 @@
     renderRecents();
     $('#btnClear').addEventListener('click', () => { consoleEl.innerHTML = ''; });
     $('#btnClipboard').addEventListener('click', handleClipboardScan);
+    $('#btnSearch').addEventListener('click', handleClipboardScan);
     $('#btnClearRecents').addEventListener('click', clearRecents);
-    statusEl.textContent = 'Offline'; statusEl.classList.add('offline');
+    
+    // Update status based on connection state
+    if (window.WJN_CONNECTED) {
+      statusEl.classList.remove('offline');
+      statusEl.classList.add('online');
+    } else {
+      statusEl.classList.remove('online');
+      statusEl.classList.add('offline');
+    }
+    
     initKeys();
+    
+    // Adjust console height after DOM is fully loaded
+    setTimeout(adjustConsoleHeight, 100);
+    
+    // Re-adjust on window resize
+    window.addEventListener('resize', adjustConsoleHeight);
+    
     log('Copy a SKU (Vendor-ID) to the clipboard and click Search or press F9.');
   }
 
