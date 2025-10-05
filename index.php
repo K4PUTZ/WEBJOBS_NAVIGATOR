@@ -1,4 +1,8 @@
-<?php declare(strict_types=1); require __DIR__.'/config.php'; ?>
+<?php 
+declare(strict_types=1); 
+require __DIR__.'/config.php'; 
+require __DIR__.'/user_data.php';
+?>
 <!doctype html>
 <html lang="en">
   <head>
@@ -17,6 +21,7 @@
         <nav class="toolbar">
           <button id="btnWelcome" class="tool">Welcome</button>
           <button id="btnClipboard" class="tool" title="F9">Check Clipboard</button>
+          <button id="btnSettings" class="tool" title="F10">Settings</button>
           <button id="btnAbout" class="tool">About</button>
           <?php if (is_connected()): ?>
             <a class="tool" href="auth.php?refresh=1">Refresh</a>
@@ -63,13 +68,33 @@
           <?php echo is_connected() ? 'Online • '.htmlspecialchars(get_account_email() ?? '') : 'Offline' ?>
         </span></div>
         <div>Server time: <code><?php echo date('Y-m-d H:i:s'); ?></code></div>
+        <div class="version">v 2.0.2</div>
       </footer>
     </div>
 
     <script>
       window.WJN_CONNECTED = <?php echo is_connected() ? 'true' : 'false' ?>;
       window.WJN_EMAIL = <?php echo json_encode(get_account_email()); ?>;
+      window.WJN_USER = <?php echo json_encode(get_user_info()); ?>;
     </script>
+    
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Settings</h3>
+          <button id="closeSettings" class="btn-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <h4>Customize Favorites</h4>
+          <div id="favoritesEditor"></div>
+          <div class="modal-actions">
+            <button id="resetFavorites" class="btn">Reset to Default</button>
+            <button id="saveFavorites" class="btn btn-primary">Save Changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <script src="assets/app.js?v=4"></script>
   </body>
 </html>

@@ -53,7 +53,7 @@
     } catch { return DEFAULT_FAVORITES.slice(); }
   }
 
-  function saveFavorites(favs) {
+  function saveFavoritesToLocal(favs) {
     localStorage.setItem('wjn_favorites', JSON.stringify(favs));
   }
 
@@ -190,10 +190,13 @@
   }
 
   async function openFavorite(idx) {
+    console.log('Opening favorite', idx);
     const sku = currentSkuEl.value && currentSkuEl.value !== '(none)' ? currentSkuEl.value : '';
     if (!sku) { log('No current SKU. Press F9 to detect from clipboard.', 'warning'); return; }
     
-    const fav = getFavorites()[idx];
+    const favorites = window.USER_FAVORITES || getFavorites();
+    const fav = favorites[idx];
+    if (!fav) { log(`Favorite ${idx + 1} not found.`, 'warning'); return; }
     const path = fav?.path || '';
     
     log(`Resolving: ${fav.label || 'Favorite'} → ${path || '/'} for ${sku}...`);
@@ -236,7 +239,7 @@
       
       const sku = result.first.sku;
       setCurrentSku(sku);
-      addRecent(sku);
+      saveUserRecent(sku);
       log('SKU detected: ' + sku, 'sku');
       
       // Log additional SKUs if found
@@ -262,8 +265,19 @@
       // Try F1..F8 (may be blocked). Also support 1..8 as reliable fallback.
       const favIndexByFunction = ({F1:0,F2:1,F3:2,F4:3,F5:4,F6:5,F7:6,F8:7})[e.key];
       if (favIndexByFunction !== undefined) { e.preventDefault(); openFavorite(favIndexByFunction); return; }
-      // Use number keys 1-8 directly (no Alt needed)
-      if (!e.ctrlKey && !e.altKey && !e.metaKey && /^[1-8]$/.test(e.key)) { e.preventDefault(); openFavorite(parseInt(e.key,10)-1); return; }
+      // F10 to open settings
+      if (e.key === 'F10') { e.preventDefault(); openSettings(); return; }
+      
+      // Use number keys 1-8 directly (no Alt needed) - but not when typing in inputs
+      if (!e.ctrlKey && !e.altKey && !e.metaKey && /^[1-8]$/.test(e.key)) {
+        const activeElement = document.activeElement;
+        if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+          return; // Don't interfere with typing
+        }
+        e.preventDefault(); 
+        openFavorite(parseInt(e.key,10)-1); 
+        return; 
+      }
     });
   }
 
@@ -291,18 +305,174 @@
     consoleEl.style.height = Math.max(200, availableHeight) + 'px';
   }
 
+  async function loadUserData() {
+    if (!window.WJN_CONNECTED || !window.WJN_USER) return;
+    
+    try {
+      const response = await fetch('user_api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'action=get_user_data'
+      });
+      
+      const data = await response.json();
+      if (data.favorites) {
+        // Update favorites with user data
+        window.USER_FAVORITES = data.favorites;
+        renderFavorites();
+      }
+      if (data.recent_skus) {
+        // Update recent SKUs with user data
+        localStorage.setItem('wjn_recents', JSON.stringify(data.recent_skus));
+        renderRecents();
+      }
+    } catch (error) {
+      console.log('Failed to load user data:', error);
+    }
+  }
+
+  async function saveUserRecent(sku) {
+    if (!window.WJN_CONNECTED) {
+      // Fallback to localStorage
+      addRecent(sku);
+      return;
+    }
+    
+    try {
+      const response = await fetch('user_api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `action=add_recent_sku&sku=${encodeURIComponent(sku)}`
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        localStorage.setItem('wjn_recents', JSON.stringify(data.recent_skus));
+        renderRecents();
+      }
+    } catch (error) {
+      // Fallback to localStorage
+      addRecent(sku);
+    }
+  }
+
+  function openSettings() {
+    if (!window.WJN_CONNECTED) {
+      alert('Please connect to Google Drive to access settings.');
+      return;
+    }
+    
+    const modal = $('#settingsModal');
+    const editor = $('#favoritesEditor');
+    
+    // Populate favorites editor
+    const favorites = window.USER_FAVORITES || getFavorites();
+    editor.innerHTML = '';
+    
+    favorites.forEach((fav, idx) => {
+      const item = document.createElement('div');
+      item.className = 'favorite-item';
+      item.innerHTML = `
+        <div class=\"key\">${idx + 1}</div>
+        <input type=\"text\" placeholder=\"Label\" value=\"${fav.label || ''}\" data-field=\"label\" data-index=\"${idx}\">
+        <input type=\"text\" placeholder=\"Path\" value=\"${fav.path || ''}\" data-field=\"path\" data-index=\"${idx}\">
+        <button class=\"btn btn-xs\" onclick=\"removeFavorite(${idx})\">&times;</button>
+      `;
+      editor.appendChild(item);
+    });
+    
+    modal.style.display = 'flex';
+  }
+
+  window.closeSettings = function() {
+    const modal = $('#settingsModal');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+  }
+
+  window.removeFavorite = function(idx) {
+    const editor = $('#favoritesEditor');
+    const items = editor.children;
+    if (items[idx]) {
+      items[idx].remove();
+    }
+  }
+
+  async function saveFavorites() {
+    const inputs = $$('#favoritesEditor input');
+    const favorites = [];
+    
+    // Group inputs by index
+    const byIndex = {};
+    inputs.forEach(input => {
+      const index = parseInt(input.dataset.index);
+      const field = input.dataset.field;
+      if (!byIndex[index]) byIndex[index] = {};
+      byIndex[index][field] = input.value;
+    });
+    
+    // Convert to array
+    Object.keys(byIndex).forEach(index => {
+      const fav = byIndex[index];
+      if (fav.label || fav.path) {
+        favorites.push({ label: fav.label || '', path: fav.path || '' });
+      }
+    });
+    
+    try {
+      const response = await fetch('user_api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `action=save_favorites&favorites=${encodeURIComponent(JSON.stringify(favorites))}`
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        window.USER_FAVORITES = favorites;
+        renderFavorites();
+        closeSettings();
+        log('Favorites saved successfully.', 'success');
+      } else {
+        log('Failed to save favorites.', 'error');
+      }
+    } catch (error) {
+      log('Error saving favorites: ' + error.message, 'error');
+    }
+  }
+
   function init() {
     renderFavorites();
     renderRecents();
     $('#btnClear').addEventListener('click', () => { consoleEl.innerHTML = ''; });
     $('#btnClipboard').addEventListener('click', handleClipboardScan);
     $('#btnSearch').addEventListener('click', handleClipboardScan);
+    const settingsBtn = $('#btnSettings');
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', () => {
+        console.log('Settings button clicked');
+        openSettings();
+      });
+    } else {
+      console.error('Settings button not found');
+    }
     $('#btnClearRecents').addEventListener('click', clearRecents);
+    $('#closeSettings').addEventListener('click', closeSettings);
+    $('#saveFavorites').addEventListener('click', saveFavorites);
+    
+    // Close modal when clicking outside
+    $('#settingsModal').addEventListener('click', (e) => {
+      if (e.target.id === 'settingsModal') {
+        closeSettings();
+      }
+    });
     
     // Update status based on connection state
     if (window.WJN_CONNECTED) {
       statusEl.classList.remove('offline');
       statusEl.classList.add('online');
+      // Load user data when connected
+      loadUserData();
     } else {
       statusEl.classList.remove('online');
       statusEl.classList.add('offline');
