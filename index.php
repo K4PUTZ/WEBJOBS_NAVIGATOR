@@ -9,7 +9,7 @@ require __DIR__.'/user_data.php';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Sofa Jobs Navigator® — Web</title>
-    <link rel="stylesheet" href="assets/style.css?v=4" />
+    <link rel="stylesheet" href="assets/style.css?v=14" />
   </head>
   <body>
     <div class="app">
@@ -19,7 +19,7 @@ require __DIR__.'/user_data.php';
           <span class="title">Sofa Jobs Navigator® 2.0</span>
         </div>
         <nav class="toolbar">
-          <button id="btnWelcome" class="tool">Welcome</button>
+          <button id="btnWelcome" class="tool">Welcome (F1)</button>
           <button id="btnClipboard" class="tool" title="F9">Check Clipboard</button>
           <button id="btnSettings" class="tool" title="F10">Settings</button>
           <button id="btnAbout" class="tool">About</button>
@@ -46,12 +46,12 @@ require __DIR__.'/user_data.php';
 
         <aside class="sidebar">
           <div class="card">
-            <h4>Current SKU</h4>
+            <h4>Current SKU <button id="btnSearchSku" class="btn btn-primary btn-search-glow" title="F9"><span class="icon">🔍</span> Search SKU (F9)</button></h4>
             <input id="currentSku" class="sku-field" type="text" readonly value="(none)" />
           </div>
 
           <div class="card">
-            <h4>Favorites</h4>
+            <h4>Favorites <button id="btnSettingsInline" class="btn" title="Home"><span class="icon">⚙️</span> Settings (Home)</button></h4>
             <div id="favorites" class="fav-list"></div>
 
           </div>
@@ -68,7 +68,7 @@ require __DIR__.'/user_data.php';
           <?php echo is_connected() ? 'Online • '.htmlspecialchars(get_account_email() ?? '') : 'Offline' ?>
         </span></div>
         <div>Server time: <code><?php echo date('Y-m-d H:i:s'); ?></code></div>
-        <div class="version">v 2.0.2</div>
+        <div class="version">v 2.0.11</div>
       </footer>
     </div>
 
@@ -87,14 +87,25 @@ require __DIR__.'/user_data.php';
         </div>
         <div class="modal-body">
           <h4>Customize Favorites</h4>
+          <div id="settingsOptions" class="settings-options">
+            <label><input type="checkbox" id="opt_sounds"> Sounds on/off</label>
+            <label><input type="checkbox" id="opt_auto_connect"> Auto-connect on/off</label>
+            <label><input type="checkbox" id="opt_auto_detect"> Auto-detect SKU on/off</label>
+            <label><input type="checkbox" id="opt_auto_load_multiple"> Auto load multiple recents (no prompt)</label>
+          </div>
           <div id="favoritesEditor"></div>
+          <div class="settings-note">
+            <img src="path_warning.png" alt="Path format guidance" />
+            <p class="hint">Warning: make sure the path has the exact same pattern of the remote folders.</p>
+          </div>
           <div class="modal-actions">
             <button id="resetFavorites" class="btn">Reset to Default</button>
+            <button id="cancelSettings" class="btn">Cancel</button>
             <button id="saveFavorites" class="btn btn-primary">Save Changes</button>
           </div>
         </div>
       </div>
     </div>
-    <script src="assets/app.js?v=4"></script>
+    <script src="assets/app.js?v=14"></script>
   </body>
 </html>

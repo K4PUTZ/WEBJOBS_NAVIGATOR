@@ -77,6 +77,15 @@ switch ($action) {
         $success = save_user_recent_skus($userId, []);
         json_response(['success' => $success]);
         break;
+
+    case 'save_settings':
+        $settings = json_decode($_POST['settings'] ?? '[]', true);
+        if (!is_array($settings)) {
+            json_response(['error' => 'Invalid settings data'], 400);
+        }
+        $success = save_user_settings($userId, $settings);
+        json_response(['success' => $success]);
+        break;
         
     default:
         json_response(['error' => 'Invalid action'], 400);

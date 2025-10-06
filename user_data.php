@@ -35,7 +35,11 @@ function load_user_data($userId) {
             'settings' => [
                 'theme' => 'dark',
                 'console_font_size' => 11,
-                'max_recent_skus' => 20
+                'max_recent_skus' => 20,
+                'sounds' => true,
+                'auto_connect' => false,
+                'auto_detect' => true,
+                'auto_load_multiple' => false
             ]
         ];
     }
@@ -62,6 +66,21 @@ function save_user_favorites($userId, $favorites) {
 function save_user_recent_skus($userId, $recentSkus) {
     $data = load_user_data($userId);
     $data['recent_skus'] = array_slice($recentSkus, 0, 20); // Limit to 20
+    return save_user_data($userId, $data);
+}
+
+function save_user_settings($userId, $settings) {
+    $data = load_user_data($userId);
+    if (!is_array($data['settings'] ?? null)) {
+        $data['settings'] = [];
+    }
+    // Whitelist expected keys
+    $allowed = ['theme','console_font_size','max_recent_skus','sounds','auto_connect','auto_detect','auto_load_multiple'];
+    foreach ($settings as $k => $v) {
+        if (in_array($k, $allowed, true)) {
+            $data['settings'][$k] = $v;
+        }
+    }
     return save_user_data($userId, $data);
 }
 

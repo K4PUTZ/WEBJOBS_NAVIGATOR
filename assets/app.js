@@ -8,6 +8,53 @@
   const statusEl = $('#status');
   const favoritesEl = $('#favorites');
 
+  // Helpers to keep UI responsive and consistent
+  function isTextInputFocused() {
+    const ae = document.activeElement;
+    if (!ae) return false;
+    const tag = ae.tagName;
+    const editable = ae.getAttribute && ae.getAttribute('contenteditable');
+    return tag === 'INPUT' || tag === 'TEXTAREA' || editable === 'true';
+  }
+
+  // Override renderFavorites with SKU-aware, slot-aware behavior
+  function renderFavorites() {
+    favoritesEl.innerHTML = '';
+    const raw = (window.USER_FAVORITES && Array.isArray(window.USER_FAVORITES) && window.USER_FAVORITES.length)
+      ? window.USER_FAVORITES
+      : getFavorites();
+    const favs = (function(f){ const out = Array.isArray(f) ? f.slice(0,8) : []; while(out.length<8) out.push({label:'',path:''}); out[0]={label:'Root Folder',path:''}; return out; })(raw);
+    const hasSku = !!(currentSkuEl && currentSkuEl.value && currentSkuEl.value !== '(none)');
+    favs.forEach((fav, idx) => {
+      const row = document.createElement('div');
+      row.className = 'fav';
+      const key = document.createElement('div'); key.className = 'key'; key.textContent = (idx+1).toString();
+      const btn = document.createElement('button');
+      btn.className = 'btn';
+      const labelText = idx === 0 ? 'Root Folder' : ((fav.label && fav.path) ? fav.label : '(empty)');
+      btn.innerHTML = `<span class=\"label\">${labelText}</span>`;
+      const slotEmpty = idx !== 0 && (!(fav.label && fav.label.trim()) || !(fav.path && fav.path.trim()));
+      btn.disabled = !hasSku || slotEmpty;
+      btn.addEventListener('click', () => openFavorite(idx));
+      row.appendChild(key); row.appendChild(btn);
+      favoritesEl.appendChild(row);
+    });
+  }
+
+  // Ensure status text and classes reflect the actual connection state
+  function updateStatusFromWindow() {
+    if (!statusEl) return;
+    const connected = !!window.WJN_CONNECTED;
+    statusEl.classList.toggle('online', connected);
+    statusEl.classList.toggle('offline', !connected);
+    if (connected) {
+      const email = (window.WJN_EMAIL && typeof window.WJN_EMAIL === 'string') ? window.WJN_EMAIL : '';
+      statusEl.textContent = email ? `Online • ${email}` : 'Online';
+    } else {
+      statusEl.textContent = 'Offline';
+    }
+  }
+
   const SKU_PATTERNS = [
     /[A-Z0-9_]+_SOFA_\d{8}_\d{4}/g,
     /[A-Z0-9]+_\d{4}_TT\d{7,8}_M/g,
@@ -25,13 +72,92 @@
     { label: 'Entrega', path: 'EXPORT/04- ENTREGAS' },
   ];
 
+  function escapeHtml(s){
+    return String(s)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/\"/g,'&quot;')
+      .replace(/'/g,'&#39;');
+  }
+
+  function highlightSkus(text){
+    let out = escapeHtml(text);
+    SKU_PATTERNS.forEach(re => {
+      const rx = new RegExp(re.source, 'g');
+      out = out.replace(rx, m => `<span class=\"sku-inline\">${escapeHtml(m)}</span>`);
+    });
+    return out;
+  }
+
+  // Simple sound system
+  let _audioCtx = null;
+  function getAudioCtx(){
+    if (!_audioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx) _audioCtx = new Ctx();
+    }
+    return _audioCtx;
+  }
+  function playTone(freq=880, ms=120){
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    try { ctx.resume && ctx.resume(); } catch(_) {}
+    const o=ctx.createOscillator(); const g=ctx.createGain();
+    o.type='sine'; o.frequency.value=freq; g.gain.value=0.05;
+    o.connect(g); g.connect(ctx.destination);
+    const now=ctx.currentTime; const end=now+ms/1000;
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(0.05, now+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, end);
+    o.start(now); o.stop(end+0.01);
+  }
+  function playSuccessChime(){
+    // Two soft triangle notes for a more elegant chime
+    const ctx = getAudioCtx(); if (!ctx) return;
+    try { ctx.resume && ctx.resume(); } catch(_) {}
+    const tone = (f, d, g=0.04) => {
+      const o=ctx.createOscillator(), ga=ctx.createGain();
+      o.type='triangle'; o.frequency.value=f; o.connect(ga); ga.connect(ctx.destination);
+      const now=ctx.currentTime; const end=now+d/1000; ga.gain.setValueAtTime(0, now);
+      ga.gain.linearRampToValueAtTime(g, now+0.02); ga.gain.exponentialRampToValueAtTime(0.0001, end);
+      o.start(now); o.stop(end+0.01);
+    };
+    tone(660, 120, 0.035);
+    setTimeout(() => tone(880, 120, 0.03), 90);
+  }
+  function getSettings(){
+    try {
+      if (window.USER_SETTINGS) return window.USER_SETTINGS;
+      const raw = localStorage.getItem('wjn_settings');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return { sounds:true, auto_connect:false, auto_detect:true, auto_load_multiple:false };
+  }
+  function play(kind){
+    const s = getSettings();
+    if (!s || s.sounds === false) return;
+    if (kind==='success' || kind==='sku') return playSuccessChime();
+    if (kind==='error') return playTone(220,200);
+    if (kind==='warning') return playTone(500,140);
+    if (kind==='hint') return playTone(760,120);
+  }
+
   function log(line, cls) {
     const span = document.createElement('div');
     if (cls) span.className = 'line-' + cls;
     const timestamp = new Date().toLocaleTimeString();
-    span.textContent = `[${timestamp}] ${line}`;
+    span.innerHTML = `[${timestamp}] ${highlightSkus(line)}`;
     consoleEl.appendChild(span);
     consoleEl.scrollTop = consoleEl.scrollHeight;
+    // Play sounds based on class
+    if (cls) {
+      if (cls === 'success') play('success');
+      else if (cls === 'error') play('error');
+      else if (cls === 'warning') play('warning');
+      else if (cls === 'hint') play('hint');
+      else if (cls === 'sku') play('sku');
+    }
     
     // Limit console to 100 lines
     while (consoleEl.children.length > 100) {
@@ -39,8 +165,15 @@
     }
   }
 
-  function setCurrentSku(sku) {
-    currentSkuEl.value = sku || '(none)';
+  function truncateSku(s, max=30) {
+    if (!s) return s;
+    return s.length > max ? s.slice(0, max - 1) + '…' : s;
+  }
+
+function setCurrentSku(sku) {
+    const v = sku ? truncateSku(sku, 30) : '(none)';
+    currentSkuEl.value = v;
+    currentSkuEl.title = sku || '';
   }
 
   function getFavorites() {
@@ -92,7 +225,8 @@
       const li = document.createElement('li');
       const a = document.createElement('a');
       a.href = '#';
-      a.textContent = sku;
+      a.textContent = truncateSku(sku, 30);
+      a.title = sku;
       a.className = 'link';
       a.addEventListener('click', (e) => { e.preventDefault(); setCurrentSku(sku); log('SKU selected: ' + sku, 'sku'); });
       li.appendChild(a);
@@ -102,7 +236,9 @@
 
   function renderFavorites() {
     favoritesEl.innerHTML = '';
-    const favs = getFavorites();
+    const favs = (window.USER_FAVORITES && Array.isArray(window.USER_FAVORITES) && window.USER_FAVORITES.length)
+      ? window.USER_FAVORITES
+      : getFavorites();
     favs.forEach((fav, idx) => {
       const row = document.createElement('div');
       row.className = 'fav';
@@ -242,11 +378,24 @@
       saveUserRecent(sku);
       log('SKU detected: ' + sku, 'sku');
       
-      // Log additional SKUs if found
-      if (result.matches.length > 1) {
-        log(`Found ${result.matches.length} SKUs total. Additional: ${result.matches.slice(1).map(m => m.sku).join(', ')}`, 'info');
-        // Add multiple SKUs to recents
-        result.matches.slice(1, 8).forEach(match => addRecent(match.sku));
+      // If multiple SKUs found, ask to add the rest to Recents (max 20)
+      if (Array.isArray(result.matches) && result.matches.length > 1) {
+        const additional = result.matches.slice(1);
+        const n = Math.min(20, additional.length);
+        const settings = getSettings();
+        let proceed = false;
+        if (settings.auto_load_multiple) {
+          proceed = true;
+        } else {
+          proceed = confirm(`Found ${result.matches.length} SKUs. Add ${n} additional SKU(s) to Recents (max 20)?`);
+        }
+        if (proceed) {
+          additional.slice(0, 20).forEach(m => addRecent(m.sku));
+          try { await syncRecentsToServer(); } catch (_) {}
+          log(`Added ${n} more SKU(s) to Recents.`, 'success');
+        } else {
+          log('Keeping only the first detected SKU.', 'info');
+        }
       }
     } catch (error) {
       log('Error during clipboard scan: ' + error.message, 'error');
@@ -255,6 +404,8 @@
 
   function initKeys() {
     document.addEventListener('keydown', (e) => {
+      // F1 opens Welcome
+      if (e.key === 'F1') { e.preventDefault(); const w = document.getElementById('btnWelcome'); if (w) w.click(); return; }
       // F9 to check clipboard
       if (e.key === 'F9') { 
         e.preventDefault(); 
@@ -265,8 +416,8 @@
       // Try F1..F8 (may be blocked). Also support 1..8 as reliable fallback.
       const favIndexByFunction = ({F1:0,F2:1,F3:2,F4:3,F5:4,F6:5,F7:6,F8:7})[e.key];
       if (favIndexByFunction !== undefined) { e.preventDefault(); openFavorite(favIndexByFunction); return; }
-      // F10 to open settings
-      if (e.key === 'F10') { e.preventDefault(); openSettings(); return; }
+      // Home key to open settings
+      if (e.key === 'Home') { e.preventDefault(); openSettings(); return; }
       
       // Use number keys 1-8 directly (no Alt needed) - but not when typing in inputs
       if (!e.ctrlKey && !e.altKey && !e.metaKey && /^[1-8]$/.test(e.key)) {
@@ -321,6 +472,10 @@
         window.USER_FAVORITES = data.favorites;
         renderFavorites();
       }
+      if (data.settings) {
+        window.USER_SETTINGS = Object.assign({ sounds:true, auto_connect:false, auto_detect:true, auto_load_multiple:false }, data.settings);
+        try { localStorage.setItem('wjn_settings', JSON.stringify(window.USER_SETTINGS)); } catch(_) {}
+      }
       if (data.recent_skus) {
         // Update recent SKUs with user data
         localStorage.setItem('wjn_recents', JSON.stringify(data.recent_skus));
@@ -356,38 +511,112 @@
     }
   }
 
-  function openSettings() {
-    if (!window.WJN_CONNECTED) {
-      alert('Please connect to Google Drive to access settings.');
-      return;
+  async function syncRecentsToServer() {
+    if (!window.WJN_CONNECTED) return;
+    try {
+      await fetch('user_api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'action=clear_recent_skus'
+      });
+      const arr = getRecents();
+      // Add from oldest to newest so newest ends first after unshift
+      for (let i = arr.length - 1; i >= 0; i--) {
+        const sku = arr[i];
+        await fetch('user_api.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `action=add_recent_sku&sku=${encodeURIComponent(sku)}`
+        });
+      }
+    } catch (e) {
+      console.log('Failed to sync recents to server:', e);
     }
+  }
+
+  function openSettings() {
     
     const modal = $('#settingsModal');
     const editor = $('#favoritesEditor');
+    const optsBox = $('#settingsOptions');
+    if (modal) {
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+    }
+    if (editor) {
+      editor.classList.add('favorites-editor');
+    }
     
+    // Populate options UI (static container)
+    const settings = getSettings();
+    if (optsBox) {
+      const map = {
+        opt_sounds: 'sounds',
+        opt_auto_connect: 'auto_connect',
+        opt_auto_detect: 'auto_detect',
+        opt_auto_load_multiple: 'auto_load_multiple'
+      };
+      Object.keys(map).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.checked = !!settings[map[id]];
+      });
+    }
+
     // Populate favorites editor
-    const favorites = window.USER_FAVORITES || getFavorites();
+    const normalize = (favs) => {
+      const out = Array.isArray(favs) ? favs.slice(0,8) : [];
+      while (out.length < 8) out.push({ label: '', path: '' });
+      out[0] = { label: 'Root Folder', path: '' };
+      return out;
+    }
+    const favorites = normalize(window.USER_FAVORITES || getFavorites());
     editor.innerHTML = '';
-    
+
+    // Header row
+    const header = document.createElement('div');
+    header.className = 'favorite-header';
+    header.innerHTML = `<div></div><div>Label</div><div>Path relative to the SKU</div>`;
+    editor.appendChild(header);
+
     favorites.forEach((fav, idx) => {
       const item = document.createElement('div');
-      item.className = 'favorite-item';
+      item.className = 'favorite-item' + (idx === 0 ? ' slot-first' : '');
+      const isFirst = idx === 0;
+      const labelVal = isFirst ? 'Root Folder' : (fav.label || '');
+      const pathVal = isFirst ? 'Number 1 always points to the root folder.' : (fav.path || '');
+      const labelDisabled = isFirst ? 'disabled' : '';
+      const pathDisabled = isFirst ? 'disabled' : '';
       item.innerHTML = `
         <div class=\"key\">${idx + 1}</div>
-        <input type=\"text\" placeholder=\"Label\" value=\"${fav.label || ''}\" data-field=\"label\" data-index=\"${idx}\">
-        <input type=\"text\" placeholder=\"Path\" value=\"${fav.path || ''}\" data-field=\"path\" data-index=\"${idx}\">
-        <button class=\"btn btn-xs\" onclick=\"removeFavorite(${idx})\">&times;</button>
+        <input type=\"text\" placeholder=\"Label\" value=\"${labelVal}\" data-field=\"label\" data-index=\"${idx}\" ${labelDisabled}>
+        <input type=\"text\" placeholder=\"Path\" value=\"${pathVal}\" data-field=\"path\" data-index=\"${idx}\" ${pathDisabled}>
       `;
       editor.appendChild(item);
     });
     
+    // Show overlay and prevent background scroll/interactions
     modal.style.display = 'flex';
+    document.body.classList.add('modal-open');
+
+    // Focus first input for quick editing
+    const firstInput = editor.querySelector('input');
+    if (firstInput) firstInput.focus();
+
+    // Close on ESC
+    const onEsc = (e) => { if (e.key === 'Escape') { e.preventDefault(); closeSettings(); } };
+    document.addEventListener('keydown', onEsc);
+    window._WJN_ESC_HANDLER = onEsc;
   }
 
   window.closeSettings = function() {
     const modal = $('#settingsModal');
     if (modal) {
       modal.style.display = 'none';
+    }
+    document.body.classList.remove('modal-open');
+    if (window._WJN_ESC_HANDLER) {
+      document.removeEventListener('keydown', window._WJN_ESC_HANDLER);
+      window._WJN_ESC_HANDLER = null;
     }
   }
 
@@ -401,24 +630,39 @@
 
   async function saveFavorites() {
     const inputs = $$('#favoritesEditor input');
-    const favorites = [];
-    
-    // Group inputs by index
+    // Gather settings toggles
+    const settings = {
+      sounds: !!$('#opt_sounds')?.checked,
+      auto_connect: !!$('#opt_auto_connect')?.checked,
+      auto_detect: !!$('#opt_auto_detect')?.checked,
+      auto_load_multiple: !!$('#opt_auto_load_multiple')?.checked,
+    };
+    await saveSettings(settings);
     const byIndex = {};
     inputs.forEach(input => {
       const index = parseInt(input.dataset.index);
       const field = input.dataset.field;
       if (!byIndex[index]) byIndex[index] = {};
-      byIndex[index][field] = input.value;
-    });
-    
-    // Convert to array
-    Object.keys(byIndex).forEach(index => {
-      const fav = byIndex[index];
-      if (fav.label || fav.path) {
-        favorites.push({ label: fav.label || '', path: fav.path || '' });
+      if (index === 0) {
+        byIndex[index] = { label: 'Root Folder', path: '' };
+      } else {
+        byIndex[index][field] = (input.value || '').trim();
       }
     });
+
+    // Validate and normalize to 8
+    const favorites = [];
+    for (let i = 0; i < 8; i++) {
+      const fav = byIndex[i] || { label: '', path: '' };
+      if (i === 0) { favorites.push({ label: 'Root Folder', path: '' }); continue; }
+      const hasLabel = !!fav.label;
+      const hasPath = !!fav.path;
+      if ((hasLabel && !hasPath) || (!hasLabel && hasPath)) {
+        alert(`Slot ${i+1}: both Label and Path must be provided, or both left empty.`);
+        return;
+      }
+      favorites.push({ label: hasLabel ? fav.label : '', path: hasPath ? fav.path : '' });
+    }
     
     try {
       const response = await fetch('user_api.php', {
@@ -430,6 +674,7 @@
       const data = await response.json();
       if (data.success) {
         window.USER_FAVORITES = favorites;
+        try { saveFavoritesToLocal(favorites); } catch (_) {}
         renderFavorites();
         closeSettings();
         log('Favorites saved successfully.', 'success');
@@ -441,12 +686,58 @@
     }
   }
 
+  async function saveSettings(settings){
+    try {
+      window.USER_SETTINGS = Object.assign({ sounds:true, auto_connect:false, auto_detect:true, auto_load_multiple:false }, settings||{});
+      localStorage.setItem('wjn_settings', JSON.stringify(window.USER_SETTINGS));
+      if (window.WJN_CONNECTED) {
+        await fetch('user_api.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `action=save_settings&settings=${encodeURIComponent(JSON.stringify(window.USER_SETTINGS))}`
+        });
+      }
+    } catch (e) { console.log('Failed to save settings:', e); }
+  }
+
+  function resetToDefaults() {
+    // Reset option toggles to defaults (sounds on, auto-detect on)
+    const defaults = { sounds:true, auto_connect:false, auto_detect:true, auto_load_multiple:false };
+    const map = {
+      opt_sounds: 'sounds',
+      opt_auto_connect: 'auto_connect',
+      opt_auto_detect: 'auto_detect',
+      opt_auto_load_multiple: 'auto_load_multiple'
+    };
+    Object.keys(map).forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.checked = !!defaults[map[id]];
+    });
+
+    // Reset favorites inputs (slot 1 fixed, others from DEFAULT_FAVORITES)
+    const favs = DEFAULT_FAVORITES.slice(0,8);
+    while (favs.length < 8) favs.push({label:'', path:''});
+    for (let i=0;i<8;i++) {
+      const labelInput = document.querySelector(`#favoritesEditor input[data-field="label"][data-index="${i}"]`);
+      const pathInput  = document.querySelector(`#favoritesEditor input[data-field="path"][data-index="${i}"]`);
+      if (!labelInput || !pathInput) continue;
+      if (i === 0) {
+        labelInput.value = 'Root Folder';
+        pathInput.value = 'Number 1 always points to the root folder.';
+      } else {
+        labelInput.value = favs[i].label || '';
+        pathInput.value  = favs[i].path || '';
+      }
+    }
+  }
+
   function init() {
     renderFavorites();
     renderRecents();
     $('#btnClear').addEventListener('click', () => { consoleEl.innerHTML = ''; });
     $('#btnClipboard').addEventListener('click', handleClipboardScan);
     $('#btnSearch').addEventListener('click', handleClipboardScan);
+    const btnSearchSku = $('#btnSearchSku'); if (btnSearchSku) btnSearchSku.addEventListener('click', handleClipboardScan);
     const settingsBtn = $('#btnSettings');
     if (settingsBtn) {
       settingsBtn.addEventListener('click', () => {
@@ -456,16 +747,20 @@
     } else {
       console.error('Settings button not found');
     }
+    const settingsInlineBtn = $('#btnSettingsInline'); if (settingsInlineBtn) settingsInlineBtn.addEventListener('click', openSettings);
     $('#btnClearRecents').addEventListener('click', clearRecents);
     $('#closeSettings').addEventListener('click', closeSettings);
+    const cancelBtn = $('#cancelSettings'); if (cancelBtn) cancelBtn.addEventListener('click', closeSettings);
     $('#saveFavorites').addEventListener('click', saveFavorites);
     
     // Close modal when clicking outside
-    $('#settingsModal').addEventListener('click', (e) => {
-      if (e.target.id === 'settingsModal') {
-        closeSettings();
-      }
-    });
+    // Keep modal persistent: ignore outside clicks
+    const overlay = $('#settingsModal');
+    if (overlay) {
+      overlay.addEventListener('click', (e) => {
+        // no-op to keep modal open on outside clicks
+      });
+    }
     
     // Update status based on connection state
     if (window.WJN_CONNECTED) {
@@ -473,22 +768,47 @@
       statusEl.classList.add('online');
       // Load user data when connected
       loadUserData();
+      log('Connected to API.', 'success');
     } else {
       statusEl.classList.remove('online');
       statusEl.classList.add('offline');
+      log('Not connected to API.', 'error');
     }
     
     initKeys();
     
+    // Bind reset-to-defaults
+    const btnReset = $('#resetFavorites'); if (btnReset) btnReset.addEventListener('click', resetToDefaults);
+
     // Adjust console height after DOM is fully loaded
     setTimeout(adjustConsoleHeight, 100);
     
     // Re-adjust on window resize
     window.addEventListener('resize', adjustConsoleHeight);
     
-    log('Copy a SKU (Vendor-ID) to the clipboard and click Search or press F9.');
+    log('Copy a SKU (Vendor-ID) to the clipboard and click Search or press F9.', 'hint');
+
+    // Auto actions based on settings
+    const settings = getSettings();
+    if (!window.WJN_CONNECTED && settings.auto_connect) {
+      setTimeout(() => { window.location.href = 'auth.php'; }, 300);
+      return; // page will navigate
+    }
+    if (settings.auto_detect) {
+      setTimeout(() => { handleClipboardScan(); }, 600);
+    }
   }
 
-  document.addEventListener('DOMContentLoaded', init);
-})();
+  // Allow plain number keys 1..8 to open favorites when not typing
+  document.addEventListener('keydown', (e) => {
+    if (!isTextInputFocused() && !e.ctrlKey && !e.metaKey && !e.altKey && /^[1-8]$/.test(e.key)) {
+      e.preventDefault();
+      try { openFavorite(parseInt(e.key, 10) - 1); } catch (_) {}
+    }
+  });
 
+  document.addEventListener('DOMContentLoaded', () => {
+    try { updateStatusFromWindow(); } catch (_) {}
+    init();
+  });
+})();
