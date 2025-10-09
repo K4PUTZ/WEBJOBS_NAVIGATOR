@@ -174,6 +174,41 @@ function setCurrentSku(sku) {
     const v = sku ? truncateSku(sku, 30) : '(none)';
     currentSkuEl.value = v;
     currentSkuEl.title = sku || '';
+    try { currentSkuEl.dataset.fullSku = sku || ''; } catch (_) {}
+    // Reflect current state into favorites enable/disable
+    try { renderFavorites(); } catch (_) {}
+  }
+
+  function getCurrentSkuFull() {
+    if (!currentSkuEl) return '';
+    // Prefer stored full SKU over truncated value
+    const ds = (currentSkuEl.dataset && currentSkuEl.dataset.fullSku) ? currentSkuEl.dataset.fullSku : '';
+    return ds || currentSkuEl.title || ((currentSkuEl.value && currentSkuEl.value !== '(none)') ? currentSkuEl.value : '');
+  }
+
+  async function copyToClipboard(text) {
+    if (!text) return false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (_) {}
+    // Fallback method
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return !!ok;
+    } catch (_) { return false; }
+  }
+
+  function resetSkuContext() {
+    // Clear any cached resolution/context to ensure a fresh environment for favorites
+    try { window.WJN_LAST_RESOLVE = null; } catch (_) {}
+    try { window.WJN_LAST_PATH = null; } catch (_) {}
   }
 
   function getFavorites() {
@@ -228,29 +263,13 @@ function setCurrentSku(sku) {
       a.textContent = truncateSku(sku, 30);
       a.title = sku;
       a.className = 'link';
-      a.addEventListener('click', (e) => { e.preventDefault(); setCurrentSku(sku); log('SKU selected: ' + sku, 'sku'); });
+      a.addEventListener('click', async (e) => { e.preventDefault(); resetSkuContext(); setCurrentSku(sku); const copied = await copyToClipboard(sku); log((copied ? 'SKU selected and copied: ' : 'SKU selected (copy failed): ') + sku, 'sku'); });
       li.appendChild(a);
       recentsEl.appendChild(li);
     });
   }
 
-  function renderFavorites() {
-    favoritesEl.innerHTML = '';
-    const favs = (window.USER_FAVORITES && Array.isArray(window.USER_FAVORITES) && window.USER_FAVORITES.length)
-      ? window.USER_FAVORITES
-      : getFavorites();
-    favs.forEach((fav, idx) => {
-      const row = document.createElement('div');
-      row.className = 'fav';
-      const key = document.createElement('div'); key.className = 'key'; key.textContent = (idx+1).toString();
-      const btn = document.createElement('button');
-      btn.className = 'btn';
-      btn.innerHTML = `<span class="label">${fav.label || ('Favorite ' + (idx+1))}</span>`;
-      btn.addEventListener('click', () => openFavorite(idx));
-      row.appendChild(key); row.appendChild(btn);
-      favoritesEl.appendChild(row);
-    });
-  }
+  
 
   async function detectSkusFromText(text) {
     try {
@@ -327,7 +346,7 @@ function setCurrentSku(sku) {
 
   async function openFavorite(idx) {
     console.log('Opening favorite', idx);
-    const sku = currentSkuEl.value && currentSkuEl.value !== '(none)' ? currentSkuEl.value : '';
+    const sku = getCurrentSkuFull();
     if (!sku) { log('No current SKU. Press F9 to detect from clipboard.', 'warning'); return; }
     
     const favorites = window.USER_FAVORITES || getFavorites();
@@ -591,7 +610,7 @@ function setCurrentSku(sku) {
       item.className = 'favorite-item' + (idx === 0 ? ' slot-first' : '');
       const isFirst = idx === 0;
       const labelVal = isFirst ? 'Root Folder' : (fav.label || '');
-      const pathVal = isFirst ? 'Number 1 always points to the root folder.' : (fav.path || '');
+      const pathVal = isFirst ? 'Favorite 1 always points to the root folder.' : (fav.path || '');
       const labelDisabled = isFirst ? 'disabled' : '';
       const pathDisabled = isFirst ? 'disabled' : '';
       item.innerHTML = `

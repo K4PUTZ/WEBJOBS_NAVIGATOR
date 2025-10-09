@@ -24,6 +24,14 @@ function json_response($data, int $status = 200): void {
     exit;
 }
 
+// Escape a literal for Google Drive query language (single-quoted)
+function gq_literal(string $s): string {
+    // Escape backslashes first, then single quotes
+    $s = str_replace('\\', '\\\\', $s);
+    $s = str_replace("'", "\\'", $s);
+    return $s;
+}
+
 /**
  * Get authenticated Google Drive service instance
  * @return Google_Service_Drive|null Drive service or null if unavailable
@@ -145,8 +153,9 @@ switch ($action) {
                 json_response(['error' => 'No shared drive mapping for SKU'], 404);
             }
             
-            // Find SKU root folder
-            $query = "name = '{$sku}' and mimeType = 'application/vnd.google-apps.folder' and '{$shared_drive_id}' in parents";
+            // Find SKU root folder (escape any quotes)
+            $sku_q = gq_literal($sku);
+            $query = "name = '{$sku_q}' and mimeType = 'application/vnd.google-apps.folder' and '{$shared_drive_id}' in parents";
             $results = $drive->files->listFiles([
                 'q' => $query,
                 'corpora' => 'drive',
@@ -169,7 +178,8 @@ switch ($action) {
                 $current_id = $folder_id;
                 
                 foreach ($segments as $segment) {
-                    $query = "name = '{$segment}' and mimeType = 'application/vnd.google-apps.folder' and '{$current_id}' in parents";
+                    $seg_q = gq_literal($segment);
+                    $query = "name = '{$seg_q}' and mimeType = 'application/vnd.google-apps.folder' and '{$current_id}' in parents";
                     $results = $drive->files->listFiles([
                         'q' => $query,
                         'corpora' => 'drive', 

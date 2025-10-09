@@ -1,6 +1,6 @@
 # WEBJOBS_NAVIGATOR_PHP Versioning System
 
-## Current Version: 2.0.1
+## Current Version: 2.0.17
 
 ### Versioning Guidelines for AI Assistants
 
@@ -10,6 +10,10 @@
 - **Z (Patch)**: Bug fixes, small tweaks, minor improvements
 
 ### Version History:
+- **v2.0.17** - Re-render favorites when Current SKU changes to enable buttons correctly
+- **v2.0.16** - Recents click resets context + copies SKU; favorites use full SKU, not truncated; bumped cache-busters
+- **v2.0.15** - Drive query escaping fix; consolidated renderFavorites; incremental upload workflow docs
+- **v2.0.14** - UI polish, status bar email, modal UX, cache-buster
 - **v2.0.1** - Added user settings system, server JSON storage, versioning system
 - **v2.0.0** - Initial web conversion release
 - **v1.4.1** - Original desktop version
