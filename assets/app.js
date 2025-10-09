@@ -1224,24 +1224,139 @@ function setCurrentSku(sku) {
     pairs.forEach(([a,b]) => { const t=document.getElementById(a), s=document.getElementById(b); if (t && s) t.checked = s.checked; });
   }
 
-  function openWelcome() {
-    const modal = document.getElementById('welcomeModal');
-    if (!modal) return;
-    modal.style.display = 'flex';
-    document.body.classList.add('modal-open');
-    if (!WELCOME_STATE.loaded) buildWelcomeSlides();
-    syncWelcomeOptionsFromSettings();
-    const prev = document.getElementById('welcomePrev'); if (prev) prev.onclick = prevWelcome;
-    const next = document.getElementById('welcomeNext'); if (next) next.onclick = handleWelcomeNext;
-    const apply = document.getElementById('welcomeApply'); if (apply) apply.onclick = () => { applyWelcomeOptions(); };
-    const close = document.getElementById('closeWelcome'); if (close) close.onclick = closeWelcome;
-  }
-  function closeWelcome() {
-    const modal = document.getElementById('welcomeModal');
-    if (!modal) return;
-    modal.style.display = 'none';
-    document.body.classList.remove('modal-open');
-  }
+    // New Welcome Wizard implementation
+    const WZ_CONFIG = (() => {
+      const footerVer = (document.querySelector('.version')?.textContent || '').trim();
+      const ver = footerVer.replace(/^v\s*/i, '').trim() || '';
+      const texts = [
+        `Welcome to Sofa Jobs Navigator® – ${ver}.\n\nCopy any Vendor-ID (SKU), press F9, and jump straight to the correct Google Drive folder. Work directly in your browser and avoid sync conflicts, forced app updates, cache corruption, disk space issues, and crashes. The browser is reliable, consistent, and instant.`,
+        `Copy once, detect many.\n\nCopy large texts from anywhere — file names, folder names, emails, web pages, chats — and press F9. The app scans your clipboard and detects all SKUs. The first valid one becomes your 'CURRENT SKU' so you can act immediately, without pasting or retyping.`,
+        `Open the right remote folder instantly.\n\nWith a 'CURRENT SKU' set, a click (or hotkey) jumps straight to its Google Drive folder or a mapped subfolder. Press 1-8 on your keyboard, or click sidebar buttons for fast, repeatable navigation—going from Vendor-ID to working context in seconds.`,
+        `Save time with Favorites.\n\nConfigure per-SKU favorites (1–8) pointing at your most-used remote folders. Standardize structure and eliminate repetitive wandering through deep paths.`,
+        `Recent SKUs one tap away.\n\nThe side panel keeps the last SKUs you touched. Click to copy or reuse them—tooltips show full values. You can detect and load up to 20 SKUs at once to the recents panel, and cycle through multiple SKUs quickly while tracking parallel work.`,
+        `Create a local folder named “SKU + suffix.”\n\nGenerate a consistently named local folder in one step. Clean, predictable naming helps keep local workspaces tidy.`,
+        `Good to go!\n\nIf you wish to change your preferences later, just press "Home".\nClick Finish to save your choices and begin working.`,
+      ];
+      return [
+        { img: 'welcome/welcome1.png', text: texts[0], key: 'auto_connect', build: (c) => {
+            const rowTop = document.createElement('div'); rowTop.className='row';
+            const p = document.createElement('div'); p.textContent = 'To begin, we must connect to Google Drive.'; p.style.textAlign='center'; p.style.marginBottom='8px'; p.style.color='var(--text)';
+            const btn = document.createElement('button'); btn.className='btn btn-primary'; btn.textContent='Connect'; btn.onclick = ()=>{ window.location.href='auth.php'; };
+            rowTop.appendChild(btn);
+            const rowChk = document.createElement('div'); rowChk.className='row';
+            const lb = document.createElement('label');
+            const cb = document.createElement('input'); cb.type='checkbox'; cb.id='wz_auto_connect'; cb.checked=!!getSettings().auto_connect; lb.appendChild(cb); lb.appendChild(document.createTextNode('Connect on startup'));
+            rowChk.appendChild(lb);
+            c.appendChild(p); c.appendChild(rowTop); c.appendChild(rowChk);
+          } },
+        { img: 'welcome/welcome2.png', text: texts[1], key: 'auto_detect', build: (c)=>{
+            const lb=document.createElement('label'); const cb=document.createElement('input'); cb.type='checkbox'; cb.id='wz_auto_detect'; cb.checked=!!getSettings().auto_detect; lb.appendChild(cb); lb.appendChild(document.createTextNode('Auto-search clipboard after connect')); c.appendChild(lb);
+          } },
+        { img: 'welcome/welcome3.png', text: texts[2], key: 'open_root_on_detect', build: (c)=>{
+            const lb=document.createElement('label'); const cb=document.createElement('input'); cb.type='checkbox'; cb.id='wz_open_root'; cb.checked=!!getSettings().open_root_on_detect; lb.appendChild(cb); lb.appendChild(document.createTextNode('Open root folder on SKU found')); c.appendChild(lb);
+          } },
+        { img: 'welcome/welcome4.png', text: texts[3], key: null, build: (c)=>{
+            const p=document.createElement('div'); p.style.textAlign='center'; p.style.color='var(--muted)'; p.textContent="You can set your favorite shortcuts by clicking 'Settings' or pressing 'Home'."; c.appendChild(p);
+          } },
+        { img: 'welcome/welcome5.png', text: texts[4], key: 'auto_load_multiple', build: (c)=>{
+            const lb=document.createElement('label'); const cb=document.createElement('input'); cb.type='checkbox'; cb.id='wz_auto_multi'; cb.checked=!!getSettings().auto_load_multiple; lb.appendChild(cb); lb.appendChild(document.createTextNode('Auto-load multiple SKUs (no prompt)')); c.appendChild(lb);
+          } },
+        { img: 'welcome/welcome6.png', text: texts[5], key: null, build: (c)=>{
+            const row=document.createElement('div'); row.className='row';
+            const inp=document.createElement('input'); inp.type='text'; inp.id='wz_working_input'; inp.readOnly=true; inp.placeholder='Choose your working folder'; inp.value = (typeof WJN_WORKDIR_LABEL==='string' && WJN_WORKDIR_LABEL) ? WJN_WORKDIR_LABEL : '';
+            const btn=document.createElement('button'); btn.className='btn'; btn.id='wz_choose_working'; btn.textContent='Choose'; btn.onclick = async()=>{ await chooseWorkingFolder(); const t=document.getElementById('wz_working_input'); if (t) t.value=WJN_WORKDIR_LABEL||''; };
+            row.appendChild(inp); row.appendChild(btn); c.appendChild(row);
+          } },
+        { img: 'welcome/welcome7.png', text: texts[6], key: 'sounds', build: (c)=>{
+            const lb=document.createElement('label'); const cb=document.createElement('input'); cb.type='checkbox'; cb.id='wz_sounds'; cb.checked=(getSettings().sounds!==false); lb.appendChild(cb); lb.appendChild(document.createTextNode('Sound on'));
+            const tip=document.createElement('div'); tip.className='wz-tip'; tip.innerHTML='💡 Tip: press F1 anytime to reopen this wizard.';
+            c.appendChild(lb); c.appendChild(tip);
+          } },
+      ];
+    })();
+
+    let WZ_STATE = { idx: 0 };
+
+    function wzApplyCurrentPage() {
+      const idx = WZ_STATE.idx;
+      const conf = WZ_CONFIG[idx];
+      const patch = {};
+      if (idx === 0) { patch.auto_connect = !!document.getElementById('wz_auto_connect')?.checked; }
+      if (idx === 1) { patch.auto_detect = !!document.getElementById('wz_auto_detect')?.checked; }
+      if (idx === 2) { patch.open_root_on_detect = !!document.getElementById('wz_open_root')?.checked; }
+      if (idx === 4) { patch.auto_load_multiple = !!document.getElementById('wz_auto_multi')?.checked; }
+      if (idx === 6) { patch.sounds = !!document.getElementById('wz_sounds')?.checked; }
+      if (Object.keys(patch).length) {
+        saveSettings(Object.assign({}, getSettings(), patch));
+        // Reflect into Settings modal if open
+        try {
+          if ('auto_connect' in patch) { const el=document.getElementById('opt_auto_connect'); if (el) el.checked=!!patch.auto_connect; }
+          if ('auto_detect' in patch) { const el=document.getElementById('opt_auto_detect'); if (el) el.checked=!!patch.auto_detect; }
+          if ('open_root_on_detect' in patch) { const el=document.getElementById('opt_open_root_on_detect'); if (el) el.checked=!!patch.open_root_on_detect; }
+          if ('auto_load_multiple' in patch) { const el=document.getElementById('opt_auto_load_multiple'); if (el) el.checked=!!patch.auto_load_multiple; }
+          if ('sounds' in patch) { const el=document.getElementById('opt_sounds'); if (el) el.checked=!!patch.sounds; }
+        } catch(_) {}
+      }
+    }
+
+    function wzRender() {
+      const idx = WZ_STATE.idx;
+      const conf = WZ_CONFIG[idx];
+      const imgBox = document.getElementById('wzImage');
+      const txtBox = document.getElementById('wzText');
+      const ctr = document.getElementById('wzControls');
+      const prevBtn = document.getElementById('wzPrev');
+      const nextBtn = document.getElementById('wzNext');
+      if (!imgBox || !txtBox || !ctr || !prevBtn || !nextBtn) return;
+      // content
+      imgBox.innerHTML = `<img alt="Welcome ${idx+1}" src="${conf.img}" />`;
+      txtBox.textContent = conf.text;
+      ctr.innerHTML=''; conf.build(ctr);
+      // dots
+      const dots = document.getElementById('wzDots');
+      if (dots) {
+        dots.innerHTML = '';
+        for (let i=0;i<WZ_CONFIG.length;i++) {
+          const d=document.createElement('div'); d.className='wz-dot'+(i===idx?' active':''); dots.appendChild(d);
+        }
+      }
+      prevBtn.disabled = (idx === 0);
+      nextBtn.textContent = (idx === WZ_CONFIG.length - 1) ? 'Finish' : 'Next';
+    }
+
+    function openWelcome() {
+      const modal = document.getElementById('welcomeModal');
+      if (!modal) return;
+      modal.style.display = 'flex';
+      document.body.classList.add('modal-open');
+      WZ_STATE.idx = 0;
+      // wire actions
+      const prevBtn = document.getElementById('wzPrev');
+      const nextBtn = document.getElementById('wzNext');
+      const closeBtn = document.getElementById('closeWelcome');
+      if (prevBtn) prevBtn.onclick = ()=>{ WZ_STATE.idx=Math.max(0, WZ_STATE.idx-1); wzRender(); };
+      if (nextBtn) nextBtn.onclick = ()=>{ wzApplyCurrentPage(); if (WZ_STATE.idx < WZ_CONFIG.length-1) { WZ_STATE.idx++; wzRender(); } else { closeWelcome(); } };
+      if (closeBtn) closeBtn.onclick = attemptCloseWelcome;
+      // overlay dismiss
+      modal.addEventListener('click', (e)=>{ if (e.target===modal) attemptCloseWelcome(); });
+      // esc to close
+      const onEsc = (e)=>{ if (e.key==='Escape') { e.preventDefault(); attemptCloseWelcome(); } };
+      document.addEventListener('keydown', onEsc);
+      window._WJN_WZ_ESC = onEsc;
+      wzRender();
+    }
+    function closeWelcome() {
+      const modal = document.getElementById('welcomeModal');
+      if (!modal) return;
+      modal.style.display = 'none';
+      document.body.classList.remove('modal-open');
+      if (window._WJN_WZ_ESC) { document.removeEventListener('keydown', window._WJN_WZ_ESC); window._WJN_WZ_ESC=null; }
+    }
+    function attemptCloseWelcome() {
+      if (confirm('Do you want to cancel the setup? You can click \"Settings\" later, or press \"F1\" to open this wizard.')) {
+        closeWelcome();
+      }
+    }
 
   function openAbout() {
     const modal = document.getElementById('aboutModal');

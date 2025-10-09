@@ -338,3 +338,22 @@ body.modal-open {
     opacity: 0.9;
   }
   .settings-blank { height: 12px; }
+
+/* Welcome Wizard (new) */
+.welcome-wizard { width: 600px; height: 700px; max-width: 95vw; max-height: 92vh; }
+.wwrap { display: grid; grid-template-rows: auto auto auto auto 1fr auto; gap: 10px; }
+.wz-image { display: flex; justify-content: center; align-items: center; }
+.wz-image img { max-width: 90%; height: auto; border-radius: 6px; }
+.wz-text { text-align: center; color: var(--text); white-space: pre-wrap; }
+.wz-sep { border-top: 1px solid #3a3a3a; margin: 8px auto 0; width: 92%; opacity: 0.9; }
+.wz-controls { display: grid; justify-content: center; gap: 8px; color: var(--text); }
+.wz-controls .row { display: flex; justify-content: center; gap: 8px; }
+.wz-controls label { display: inline-flex; align-items: center; gap: 8px; }
+.wz-controls input[type="text"] { background: var(--bg); border: 1px solid #3a3a3a; border-radius: 6px; padding: 6px 8px; color: var(--text); min-width: 280px; }
+.wz-nav { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; margin-top: 6px; }
+.wz-nav .btn { justify-self: start; }
+.wz-nav .btn.btn-primary { justify-self: end; }
+.wz-dots { display: flex; gap: 8px; justify-content: center; }
+.wz-dot { width: 8px; height: 8px; border-radius: 50%; background: #888; opacity: 0.9; box-shadow: none; }
+.wz-dot.active { background: #fff; width: 10px; height: 10px; box-shadow: 0 0 6px rgba(255,255,255,0.7); }
+.wz-tip { color: var(--muted); font-style: italic; font-size: 12px; text-align: center; }

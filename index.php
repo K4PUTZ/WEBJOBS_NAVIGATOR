@@ -9,7 +9,7 @@ require __DIR__.'/user_data.php';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Sofa Jobs Navigator® — Web</title>
-      <link rel="stylesheet" href="assets/style.css?v=27" />
+      <link rel="stylesheet" href="assets/style.css?v=28" />
     <link rel="icon" href="sofa_icon.ico" sizes="any">
     <link rel="icon" type="image/png" href="sofa_icon_128.png" sizes="128x128">
     <link rel="apple-touch-icon" href="sofa_icon.png">
@@ -80,7 +80,7 @@ require __DIR__.'/user_data.php';
               <?php echo is_connected() ? 'Online • '.htmlspecialchars(get_account_email() ?? '') : 'Offline' ?>
             </span></div>
             <div>Server time: <code><?php echo date('Y-m-d H:i:s'); ?></code></div>
-            <div class="version">v 2.0.24</div>
+            <div class="version">v 2.0.25</div>
           </div>
         </footer>
     </div>
@@ -130,36 +130,24 @@ require __DIR__.'/user_data.php';
         </div>
       </div>
 
-    <!-- Welcome Modal -->
+    <!-- Welcome Modal (Wizard) -->
     <div id="welcomeModal" class="modal" style="display:none;">
-      <div class="modal-content welcome-content">
+      <div class="modal-content welcome-wizard">
         <div class="modal-header">
           <h3>Welcome</h3>
           <button id="closeWelcome" class="btn-close">&times;</button>
         </div>
         <div class="modal-body">
-          <div class="welcome-grid">
-            <div class="welcome-slides">
-              <div id="welcomeSlides" class="slides"></div>
-              <div id="welcomeText" class="welcome-text"></div>
-              <div id="welcomeInlineOptions" class="welcome-inline-options"></div>
-              <div class="welcome-nav">
-                <button id="welcomePrev" class="btn">◀ Prev</button>
-                <div id="welcomePager" class="pager">1 / 1</div>
-                <button id="welcomeNext" class="btn btn-primary">Next ▶</button>
-              </div>
-            </div>
-            <div class="welcome-options">
-              <h4>Quick Options</h4>
-              <div class="settings-options">
-                <label><input type="checkbox" id="w_opt_sounds"> Sounds on/off</label>
-                <label><input type="checkbox" id="w_opt_auto_connect"> Auto-connect on/off</label>
-                <label><input type="checkbox" id="w_opt_auto_detect"> Auto-detect SKU on/off</label>
-                <label><input type="checkbox" id="w_opt_auto_load_multiple"> Auto load multiple recents (no prompt)</label>
-              </div>
-              <div class="row-right">
-                <button id="welcomeApply" class="btn btn-primary">Apply</button>
-              </div>
+          <div class="wwrap">
+            <div id="wzImage" class="wz-image"></div>
+            <div id="wzText" class="wz-text"></div>
+            <div class="wz-sep"></div>
+            <div id="wzControls" class="wz-controls"></div>
+            <div class="wz-spacer"></div>
+            <div class="wz-nav">
+              <button id="wzPrev" class="btn" disabled>Previous</button>
+              <div id="wzDots" class="wz-dots"></div>
+              <button id="wzNext" class="btn btn-primary">Next</button>
             </div>
           </div>
         </div>
@@ -185,6 +173,6 @@ require __DIR__.'/user_data.php';
         </div>
       </div>
     </div>
-      <script src="assets/app.js?v=27"></script>
+      <script src="assets/app.js?v=28"></script>
     </body>
   </html>
