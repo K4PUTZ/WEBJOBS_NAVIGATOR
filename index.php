@@ -9,7 +9,7 @@ require __DIR__.'/user_data.php';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Sofa Jobs Navigator® — Web</title>
-      <link rel="stylesheet" href="assets/style.css?v=25" />
+      <link rel="stylesheet" href="assets/style.css?v=27" />
     <link rel="icon" href="sofa_icon.ico" sizes="any">
     <link rel="icon" type="image/png" href="sofa_icon_128.png" sizes="128x128">
     <link rel="apple-touch-icon" href="sofa_icon.png">
@@ -64,23 +64,24 @@ require __DIR__.'/user_data.php';
         </aside>
       </main>
 
-        <div class="statusbar workingbar">
-          <div class="working-left">
-            <span class="wlabel">Working Folder:</span>
-            <span id="workingDisplay" class="working-display">Not set, press 'Home' to open settings</span>
+        <footer class="statusbar stacked">
+          <div class="status-row workingbar">
+            <div class="working-left">
+              <span class="wlabel">Working Folder:</span>
+              <span id="workingDisplay" class="working-display">Not set, press 'Home' to open settings</span>
+            </div>
+            <div class="working-right">
+              <input id="skuSuffixInput" type="text" placeholder="Suffix (optional)" />
+              <button id="btnCreateSkuFolder" class="btn btn-primary" disabled>Create SKU Folder</button>
+            </div>
           </div>
-          <div class="working-right">
-            <input id="skuSuffixInput" type="text" placeholder="Suffix (optional)" />
-            <button id="btnCreateSkuFolder" class="btn btn-primary" disabled>Create SKU Folder</button>
+          <div class="status-row">
+            <div>Status: <span id="status" class="status <?php echo is_connected() ? 'online' : 'offline' ?>">
+              <?php echo is_connected() ? 'Online • '.htmlspecialchars(get_account_email() ?? '') : 'Offline' ?>
+            </span></div>
+            <div>Server time: <code><?php echo date('Y-m-d H:i:s'); ?></code></div>
+            <div class="version">v 2.0.24</div>
           </div>
-        </div>
-        
-        <footer class="statusbar">
-          <div>Status: <span id="status" class="status <?php echo is_connected() ? 'online' : 'offline' ?>">
-            <?php echo is_connected() ? 'Online • '.htmlspecialchars(get_account_email() ?? '') : 'Offline' ?>
-          </span></div>
-          <div>Server time: <code><?php echo date('Y-m-d H:i:s'); ?></code></div>
-          <div class="version">v 2.0.22</div>
         </footer>
     </div>
 
@@ -184,6 +185,6 @@ require __DIR__.'/user_data.php';
         </div>
       </div>
     </div>
-      <script src="assets/app.js?v=25"></script>
+      <script src="assets/app.js?v=27"></script>
     </body>
   </html>
