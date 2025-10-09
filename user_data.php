@@ -39,7 +39,9 @@ function load_user_data($userId) {
                 'sounds' => true,
                 'auto_connect' => false,
                 'auto_detect' => true,
-                'auto_load_multiple' => false
+                'auto_load_multiple' => false,
+                'open_root_on_detect' => false,
+                'show_welcome_on_startup' => false
             ]
         ];
     }
@@ -75,7 +77,7 @@ function save_user_settings($userId, $settings) {
         $data['settings'] = [];
     }
     // Whitelist expected keys
-    $allowed = ['theme','console_font_size','max_recent_skus','sounds','auto_connect','auto_detect','auto_load_multiple'];
+    $allowed = ['theme','console_font_size','max_recent_skus','sounds','auto_connect','auto_detect','auto_load_multiple','open_root_on_detect','show_welcome_on_startup'];
     foreach ($settings as $k => $v) {
         if (in_array($k, $allowed, true)) {
             $data['settings'][$k] = $v;

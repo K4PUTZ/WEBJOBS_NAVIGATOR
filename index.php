@@ -9,7 +9,10 @@ require __DIR__.'/user_data.php';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Sofa Jobs Navigator® — Web</title>
-    <link rel="stylesheet" href="assets/style.css?v=14" />
+    <link rel="stylesheet" href="assets/style.css?v=17" />
+    <link rel="icon" href="sofa_icon.ico" sizes="any">
+    <link rel="icon" type="image/png" href="sofa_icon_128.png" sizes="128x128">
+    <link rel="apple-touch-icon" href="sofa_icon.png">
   </head>
   <body>
     <div class="app">
@@ -21,15 +24,13 @@ require __DIR__.'/user_data.php';
         <nav class="toolbar">
           <button id="btnWelcome" class="tool">Welcome (F1)</button>
           <button id="btnClipboard" class="tool" title="F9">Check Clipboard</button>
-          <button id="btnSettings" class="tool" title="F10">Settings</button>
           <button id="btnAbout" class="tool">About</button>
           <?php if (is_connected()): ?>
-            <a class="tool" href="auth.php?refresh=1">Refresh</a>
             <a class="tool" href="logout.php">Sign out</a>
           <?php else: ?>
             <a class="tool" href="auth.php">Connect</a>
           <?php endif; ?>
-          <button id="btnSearch" class="tool" title="F12 / Alt+S">Search SKU</button>
+          
         </nav>
       </header>
 
@@ -68,7 +69,7 @@ require __DIR__.'/user_data.php';
           <?php echo is_connected() ? 'Online • '.htmlspecialchars(get_account_email() ?? '') : 'Offline' ?>
         </span></div>
         <div>Server time: <code><?php echo date('Y-m-d H:i:s'); ?></code></div>
-        <div class="version">v 2.0.11</div>
+        <div class="version">v 2.0.14</div>
       </footer>
     </div>
 
@@ -92,6 +93,8 @@ require __DIR__.'/user_data.php';
             <label><input type="checkbox" id="opt_auto_connect"> Auto-connect on/off</label>
             <label><input type="checkbox" id="opt_auto_detect"> Auto-detect SKU on/off</label>
             <label><input type="checkbox" id="opt_auto_load_multiple"> Auto load multiple recents (no prompt)</label>
+            <label><input type="checkbox" id="opt_open_root_on_detect"> Open root folder on SKU found</label>
+            <label><input type="checkbox" id="opt_show_welcome"> Show Welcome Window on Startup</label>
           </div>
           <div id="favoritesEditor"></div>
           <div class="settings-note">
@@ -106,6 +109,62 @@ require __DIR__.'/user_data.php';
         </div>
       </div>
     </div>
-    <script src="assets/app.js?v=14"></script>
+
+    <!-- Welcome Modal -->
+    <div id="welcomeModal" class="modal" style="display:none;">
+      <div class="modal-content welcome-content">
+        <div class="modal-header">
+          <h3>Welcome</h3>
+          <button id="closeWelcome" class="btn-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="welcome-grid">
+            <div class="welcome-slides">
+              <div id="welcomeSlides" class="slides"></div>
+              <div id="welcomeText" class="welcome-text"></div>
+              <div id="welcomeInlineOptions" class="welcome-inline-options"></div>
+              <div class="welcome-nav">
+                <button id="welcomePrev" class="btn">◀ Prev</button>
+                <div id="welcomePager" class="pager">1 / 1</div>
+                <button id="welcomeNext" class="btn btn-primary">Next ▶</button>
+              </div>
+            </div>
+            <div class="welcome-options">
+              <h4>Quick Options</h4>
+              <div class="settings-options">
+                <label><input type="checkbox" id="w_opt_sounds"> Sounds on/off</label>
+                <label><input type="checkbox" id="w_opt_auto_connect"> Auto-connect on/off</label>
+                <label><input type="checkbox" id="w_opt_auto_detect"> Auto-detect SKU on/off</label>
+                <label><input type="checkbox" id="w_opt_auto_load_multiple"> Auto load multiple recents (no prompt)</label>
+              </div>
+              <div class="row-right">
+                <button id="welcomeApply" class="btn btn-primary">Apply</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- About Modal -->
+    <div id="aboutModal" class="modal" style="display:none;">
+      <div class="modal-content about-content">
+        <div class="modal-header">
+          <h3>About</h3>
+          <button id="closeAbout" class="btn-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="about-body">
+            <img class="about-logo" src="welcome/Sofa.png" alt="Sofa" />
+            <div class="about-text">
+              <p>Sofa Jobs Navigator® — Web Edition</p>
+              <p>Tools to detect SKUs and jump to Google Drive folders quickly.</p>
+              <p>Use F1 for Welcome, F9 to Search, and Home for Settings.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="assets/app.js?v=17"></script>
   </body>
 </html>

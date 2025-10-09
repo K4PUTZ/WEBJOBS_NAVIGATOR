@@ -57,14 +57,15 @@ def bump_versions(dry: bool = False) -> VersionChange:
     new_patch = patch + 1
     old_app = f"{major}.{minor}.{patch}"
     new_app = f"{major}.{minor}.{new_patch}"
-    content = ver_re.sub(rf"\1{new_app}\5", content, count=1)
+    # Use group names to avoid '\1' + digit ambiguity (e.g., becomes \12)
+    content = ver_re.sub(lambda m: f"{m.group(1)}{new_app}{m.group(5)}", content, count=1)
 
     # Bump cache busters for assets to max(existing)+1
     cache_re = re.compile(r'(assets/(?:style\.css|app\.js)\?v=)(\d+)')
-    nums = [int(n) for n in cache_re.findall(content)]
+    nums = [int(n2) for _, n2 in cache_re.findall(content)]
     old_cache = max(nums) if nums else 0
     new_cache = old_cache + 1
-    content = cache_re.sub(rf"\1{new_cache}", content)
+    content = cache_re.sub(rf"\g<1>{new_cache}", content)
 
     if not dry:
         with open(INDEX, 'w', encoding='utf-8') as f:
@@ -97,23 +98,26 @@ def _ftp_mkdirs(ftp: ftplib.FTP, path: str) -> None:
 
 
 def upload_files(dry: bool = False) -> None:
+    """Upload entire project tree except the Dev/ folder.
+
+    All files under WEBJOBS_NAVIGATOR_PHP are uploaded preserving the
+    directory structure. Any directory named 'Dev' at any level is skipped.
+    """
     remote_base = os.getenv('FTP_REMOTE', 'jobs_navigator')
-    files = [
-        'index.php',
-        'assets/style.css',
-        'assets/app.js',
-        'user_api.php',
-        'user_data.php',
-        'path_warning.png',
-        'logo.png',
-        'logo.svg',
-    ]
-    # Existing-only filtering
-    files = [f for f in files if os.path.isfile(os.path.join(ROOT, f))]
+
+    all_files: list[str] = []
+    for root, dirs, files in os.walk(ROOT):
+        # Skip any Dev directory
+        dirs[:] = [d for d in dirs if d != 'Dev']
+        for name in files:
+            rel = os.path.relpath(os.path.join(root, name), ROOT)
+            rel = rel.replace(os.sep, '/')
+            # Skip nothing else per request (include dotfiles and vendor)
+            all_files.append(rel)
 
     if dry:
-        print('[dry-run] Would upload:')
-        for f in files:
+        print(f"[dry-run] Would upload {len(all_files)} files:")
+        for f in all_files:
             print(' -', f)
         return
 
@@ -124,7 +128,7 @@ def upload_files(dry: bool = False) -> None:
         _ftp_mkdirs(ftp, remote_base)
         ftp.cwd(remote_base)
 
-    for rel in files:
+    for rel in all_files:
         local_path = os.path.join(ROOT, rel)
         # ensure remote subdirs
         subdir = os.path.dirname(rel)
@@ -193,4 +197,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
-

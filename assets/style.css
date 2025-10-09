@@ -247,6 +247,33 @@ body.modal-open {
 .settings-options label { display: flex; align-items: center; gap: 8px; color: var(--text); }
 .settings-options input[type="checkbox"] { accent-color: var(--cyan); }
 
+/* Welcome modal layout */
+.welcome-content { max-width: 960px; }
+.welcome-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+.slides { position: relative; background: #111; border: 1px solid #333; border-radius: 6px; overflow: hidden; min-height: 340px; display: flex; align-items: center; justify-content: center; }
+.slides img { max-width: 100%; height: auto; display: none; }
+.slides img.active { display: block; }
+.welcome-text { margin-top: 10px; color: var(--text); }
+.welcome-text h4 { margin: 8px 0 6px; }
+.welcome-text p { margin: 0 0 10px; color: var(--muted); }
+.welcome-inline-options { margin: 6px 0 8px; }
+.welcome-inline-options label { display: inline-flex; align-items:center; gap:8px; margin-right: 12px; }
+.welcome-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.pager { color: var(--muted); font-family: ui-monospace, monospace; }
+.welcome-options h4 { margin: 0 0 8px 0; }
+
+/* About modal */
+.about-content { max-width: 680px; }
+.about-body { display: flex; align-items: center; gap: 16px; }
+.about-logo { width: 120px; height: auto; border-radius: 8px; border: 1px solid #3a3a3a; background: #111; }
+.about-text p { margin: 6px 0; }
+
+/* Header action buttons in card titles */
+.card h4 .btn { font-size: 12px; padding: 4px 8px; }
+.btn .icon { margin-right: 6px; }
+.btn-search-glow { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(13,202,240,0.35), 0 0 12px rgba(13,202,240,0.55); }
+.btn-search-glow:hover { box-shadow: 0 0 0 2px rgba(13,202,240,0.45), 0 0 14px rgba(13,202,240,0.7); }
+
 /* Responsive breakpoints */
 @media (max-width: 960px) {
   .grid { grid-template-columns: 1fr; }

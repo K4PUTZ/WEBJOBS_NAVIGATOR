@@ -397,6 +397,14 @@ function setCurrentSku(sku) {
           log('Keeping only the first detected SKU.', 'info');
         }
       }
+
+      // If configured, open root folder immediately on detect
+      try {
+        const s = getSettings();
+        if (s.open_root_on_detect && window.WJN_CONNECTED) {
+          await openFavorite(0);
+        }
+      } catch (_) {}
     } catch (error) {
       log('Error during clipboard scan: ' + error.message, 'error');
     }
@@ -736,7 +744,7 @@ function setCurrentSku(sku) {
     renderRecents();
     $('#btnClear').addEventListener('click', () => { consoleEl.innerHTML = ''; });
     $('#btnClipboard').addEventListener('click', handleClipboardScan);
-    $('#btnSearch').addEventListener('click', handleClipboardScan);
+    const btnSearchTop = $('#btnSearch'); if (btnSearchTop) btnSearchTop.addEventListener('click', handleClipboardScan);
     const btnSearchSku = $('#btnSearchSku'); if (btnSearchSku) btnSearchSku.addEventListener('click', handleClipboardScan);
     const settingsBtn = $('#btnSettings');
     if (settingsBtn) {
@@ -748,6 +756,8 @@ function setCurrentSku(sku) {
       console.error('Settings button not found');
     }
     const settingsInlineBtn = $('#btnSettingsInline'); if (settingsInlineBtn) settingsInlineBtn.addEventListener('click', openSettings);
+    const btnWelcome = $('#btnWelcome'); if (btnWelcome) btnWelcome.addEventListener('click', openWelcome);
+    const btnAbout = $('#btnAbout'); if (btnAbout) btnAbout.addEventListener('click', openAbout);
     $('#btnClearRecents').addEventListener('click', clearRecents);
     $('#closeSettings').addEventListener('click', closeSettings);
     const cancelBtn = $('#cancelSettings'); if (cancelBtn) cancelBtn.addEventListener('click', closeSettings);
@@ -760,6 +770,14 @@ function setCurrentSku(sku) {
       overlay.addEventListener('click', (e) => {
         // no-op to keep modal open on outside clicks
       });
+    }
+    const welcomeOverlay = $('#welcomeModal');
+    if (welcomeOverlay) {
+      welcomeOverlay.addEventListener('click', (e) => {});
+    }
+    const aboutOverlay = $('#aboutModal');
+    if (aboutOverlay) {
+      aboutOverlay.addEventListener('click', (e) => {});
     }
     
     // Update status based on connection state
@@ -810,5 +828,205 @@ function setCurrentSku(sku) {
   document.addEventListener('DOMContentLoaded', () => {
     try { updateStatusFromWindow(); } catch (_) {}
     init();
+    // Auto show Welcome if configured
+    try { const s = getSettings(); if (s.show_welcome_on_startup) openWelcome(); } catch(_) {}
   });
+
+  // ----------------- Welcome / About -----------------
+  let WELCOME_STATE = { idx: 0, total: 0, loaded: false };
+
+  function buildWelcomeSlides() {
+    const container = document.getElementById('welcomeSlides');
+    if (!container) return;
+    container.innerHTML = '';
+    const imgs = [];
+    // Try welcome1..welcome10
+    const tryCount = 10;
+    let toLoad = 0; let loaded = 0;
+    for (let i = 1; i <= tryCount; i++) {
+      const img = new Image();
+      img.alt = `Welcome ${i}`;
+      img.className = '';
+      img.onload = () => {
+        container.appendChild(img);
+        imgs.push(img);
+        loaded++;
+        if (loaded === toLoad) finish();
+      };
+      img.onerror = () => { /* skip missing */ };
+      img.src = `welcome/welcome${i}.png`;
+      toLoad++;
+    }
+    function finish() {
+      WELCOME_STATE.total = imgs.length;
+      WELCOME_STATE.idx = 0;
+      imgs.forEach((im, idx) => { if (idx === 0) im.classList.add('active'); });
+      updateWelcomePager();
+      updateWelcomeTextAndInline();
+      WELCOME_STATE.loaded = true;
+    }
+  }
+
+  function updateWelcomePager() {
+    const pager = document.getElementById('welcomePager');
+    if (!pager) return;
+    const t = WELCOME_STATE.total || 1;
+    pager.textContent = `${Math.min(WELCOME_STATE.idx + 1, t)} / ${t}`;
+  }
+
+  const WELCOME_TEXT = [
+    {
+      title: 'Welcome to Sofa Jobs Navigator — Web',
+      body: 'Copy any Vendor-ID or SKU and press F9 (Search). The app scans your clipboard and detects SKUs. The browser-based flow avoids sync conflicts and is fast and reliable.' ,
+      inline: function() {
+        const s = getSettings();
+        return `
+          <div class=\"settings-options\">
+            <label><input type=\"checkbox\" id=\"w1_connect_on_startup\" ${s.auto_connect?'checked':''}> Connect on Startup</label>
+            <button id=\"w1_connect\" class=\"btn btn-primary\">Connect</button>
+          </div>`;
+      }
+    },
+    {
+      title: 'Copy once, detect many',
+      body: 'Copy large texts from anywhere — file names, emails, web pages — and press F9. All SKUs are detected; the first valid becomes your CURRENT SKU so you can act immediately.',
+      inline: function(){ const s=getSettings(); return `<label><input type=\"checkbox\" id=\"w2_auto_detect\" ${s.auto_detect?'checked':''}> Auto-search clipboard after connect</label>`; }
+    },
+    {
+      title: 'Open the right remote folder instantly',
+      body: 'With a CURRENT SKU set, a click or hotkey jumps straight to its Google Drive folder or a mapped subfolder. Use F1–F8 or the sidebar favorites.',
+      inline: function(){ const s=getSettings(); return `<label><input type=\"checkbox\" id=\"w3_open_root\" ${s.open_root_on_detect?'checked':''}> Open root folder on SKU found</label>`; }
+    },
+    {
+      title: 'Per-SKU Favorites',
+      body: 'Configure per-SKU favorites (F1–F8) for your most used remote folders. Standardize structure and eliminate repetitive navigation.',
+      inline: function(){ return `<button id=\"w4_set_favorites\" class=\"btn\">Set Favorites</button>`; }
+    },
+    {
+      title: 'Recent SKUs one tap away',
+      body: 'The side panel keeps your latest SKUs. Click to reuse them; tooltips show full values. You can load multiple SKUs at once to Recents and cycle quickly.',
+      inline: function(){ const s=getSettings(); return `<label><input type=\"checkbox\" id=\"w5_auto_multi\" ${s.auto_load_multiple?'checked':''}> Auto-load multiple SKUs (no prompt)</label>`; }
+    },
+    {
+      title: 'All done',
+      body: 'Good to go! You can change preferences later in Settings (Home key).',
+      inline: function(){ const s=getSettings(); return `
+        <div class=\"settings-options\">
+          <label><input type=\"checkbox\" id=\"w6_sounds\" ${s.sounds?'checked':''}> Sounds On</label>
+          <label><input type=\"checkbox\" id=\"w6_show\" ${s.show_welcome_on_startup?'checked':''}> Show Welcome Window on Startup</label>
+        </div>`; }
+    }
+  ];
+
+  function updateWelcomeTextAndInline() {
+    const text = document.getElementById('welcomeText');
+    const inline = document.getElementById('welcomeInlineOptions');
+    const nextBtn = document.getElementById('welcomeNext');
+    const prevBtn = document.getElementById('welcomePrev');
+    if (!text || !inline) return;
+    const data = WELCOME_TEXT[Math.min(WELCOME_STATE.idx, WELCOME_TEXT.length-1)] || WELCOME_TEXT[0];
+    text.innerHTML = `<h4>${data.title}</h4><p>${data.body}</p>`;
+    inline.innerHTML = data.inline ? data.inline() : '';
+    if (WELCOME_STATE.idx === 0 && !window.WJN_CONNECTED) {
+      const b = document.getElementById('w1_connect'); if (b) b.onclick = () => { window.location.href = 'auth.php'; };
+    }
+    const favBtn = document.getElementById('w4_set_favorites'); if (favBtn) favBtn.onclick = openSettings;
+    if (nextBtn) nextBtn.textContent = (WELCOME_STATE.idx >= WELCOME_TEXT.length-1) ? 'Finish ▶' : 'Next ▶';
+    if (prevBtn) prevBtn.disabled = (WELCOME_STATE.idx <= 0);
+  }
+
+  function handleWelcomeNext(){
+    // Apply inline state for the current slide
+    const i = WELCOME_STATE.idx;
+    const s = getSettings();
+    const patch = {};
+    if (i === 0) patch.auto_connect = !!document.getElementById('w1_connect_on_startup')?.checked;
+    if (i === 1) patch.auto_detect = !!document.getElementById('w2_auto_detect')?.checked;
+    if (i === 2) patch.open_root_on_detect = !!document.getElementById('w3_open_root')?.checked;
+    if (i === 4) patch.auto_load_multiple = !!document.getElementById('w5_auto_multi')?.checked;
+    if (i === 5) {
+      patch.sounds = !!document.getElementById('w6_sounds')?.checked;
+      patch.show_welcome_on_startup = !!document.getElementById('w6_show')?.checked;
+    }
+    if (Object.keys(patch).length) saveSettings(Object.assign({}, s, patch));
+    if (WELCOME_STATE.idx >= WELCOME_TEXT.length-1) { closeWelcome(); return; }
+    nextWelcome();
+  }
+
+  function setWelcomeSlide(n) {
+    const container = document.getElementById('welcomeSlides');
+    if (!container) return;
+    const imgs = Array.from(container.querySelectorAll('img'));
+    if (!imgs.length) return;
+    const total = imgs.length;
+    WELCOME_STATE.idx = (n + total) % total;
+    imgs.forEach((im, i) => { im.classList.toggle('active', i === WELCOME_STATE.idx); });
+    updateWelcomePager();
+    updateWelcomeTextAndInline();
+  }
+
+  function nextWelcome() { setWelcomeSlide(WELCOME_STATE.idx + 1); }
+  function prevWelcome() { setWelcomeSlide(WELCOME_STATE.idx - 1); }
+
+  function syncWelcomeOptionsFromSettings() {
+    const s = getSettings();
+    const map = [
+      ['w_opt_sounds', 'sounds'],
+      ['w_opt_auto_connect', 'auto_connect'],
+      ['w_opt_auto_detect', 'auto_detect'],
+      ['w_opt_auto_load_multiple', 'auto_load_multiple'],
+    ];
+    map.forEach(([id, key]) => { const el = document.getElementById(id); if (el) el.checked = !!s[key]; });
+  }
+
+  function applyWelcomeOptions() {
+    const settings = {
+      sounds: !!document.getElementById('w_opt_sounds')?.checked,
+      auto_connect: !!document.getElementById('w_opt_auto_connect')?.checked,
+      auto_detect: !!document.getElementById('w_opt_auto_detect')?.checked,
+      auto_load_multiple: !!document.getElementById('w_opt_auto_load_multiple')?.checked,
+    };
+    saveSettings(settings);
+    // Also reflect into Settings modal if present
+    const pairs = [
+      ['opt_sounds','w_opt_sounds'],
+      ['opt_auto_connect','w_opt_auto_connect'],
+      ['opt_auto_detect','w_opt_auto_detect'],
+      ['opt_auto_load_multiple','w_opt_auto_load_multiple'],
+    ];
+    pairs.forEach(([a,b]) => { const t=document.getElementById(a), s=document.getElementById(b); if (t && s) t.checked = s.checked; });
+  }
+
+  function openWelcome() {
+    const modal = document.getElementById('welcomeModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    document.body.classList.add('modal-open');
+    if (!WELCOME_STATE.loaded) buildWelcomeSlides();
+    syncWelcomeOptionsFromSettings();
+    const prev = document.getElementById('welcomePrev'); if (prev) prev.onclick = prevWelcome;
+    const next = document.getElementById('welcomeNext'); if (next) next.onclick = handleWelcomeNext;
+    const apply = document.getElementById('welcomeApply'); if (apply) apply.onclick = () => { applyWelcomeOptions(); };
+    const close = document.getElementById('closeWelcome'); if (close) close.onclick = closeWelcome;
+  }
+  function closeWelcome() {
+    const modal = document.getElementById('welcomeModal');
+    if (!modal) return;
+    modal.style.display = 'none';
+    document.body.classList.remove('modal-open');
+  }
+
+  function openAbout() {
+    const modal = document.getElementById('aboutModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    document.body.classList.add('modal-open');
+    const close = document.getElementById('closeAbout'); if (close) close.onclick = closeAbout;
+  }
+  function closeAbout() {
+    const modal = document.getElementById('aboutModal');
+    if (!modal) return;
+    modal.style.display = 'none';
+    document.body.classList.remove('modal-open');
+  }
 })();
