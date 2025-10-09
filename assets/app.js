@@ -8,6 +8,175 @@
   const statusEl = $('#status');
   const favoritesEl = $('#favorites');
 
+  const workingDisplay = document.getElementById('workingDisplay');
+  const skuSuffixInput = document.getElementById('skuSuffixInput');
+  const btnCreateSkuFolder = document.getElementById('btnCreateSkuFolder');
+  const workingFolderInput = document.getElementById('workingFolderInput');
+  const chooseWorkingFolderBtn = document.getElementById('chooseWorkingFolder');
+
+  // Working folder state
+  let WJN_WORKDIR_HANDLE = null; // FileSystemDirectoryHandle when available
+  let WJN_WORKDIR_LABEL = '';
+
+  // IndexedDB helpers for storing directory handle
+  let _wjnDB = null;
+  async function idbOpen() {
+    if (_wjnDB) return _wjnDB;
+    return await new Promise((resolve, reject) => {
+      const req = indexedDB.open('wjn', 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains('handles')) db.createObjectStore('handles');
+        if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
+      };
+      req.onsuccess = () => { _wjnDB = req.result; resolve(_wjnDB); };
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbPut(store, key, value) {
+    const db = await idbOpen();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(store, 'readwrite');
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error);
+      tx.objectStore(store).put(value, key);
+    });
+  }
+  async function idbGet(store, key) {
+    const db = await idbOpen();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(store, 'readonly');
+      tx.onerror = () => reject(tx.error);
+      const req = tx.objectStore(store).get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  function getSuffix() {
+    try {
+      if (window.USER_SETTINGS && typeof window.USER_SETTINGS.sku_suffix === 'string') return window.USER_SETTINGS.sku_suffix;
+      const raw = localStorage.getItem('wjn_sku_suffix');
+      return raw || '';
+    } catch (_) { return ''; }
+  }
+  async function saveSuffix(s) {
+    try { localStorage.setItem('wjn_sku_suffix', s); } catch(_) {}
+    try {
+      const cur = window.USER_SETTINGS || {};
+      cur.sku_suffix = s;
+      await saveSettings(cur);
+    } catch(_) {}
+  }
+
+  function getCurrentSkuFull() {
+    if (!currentSkuEl) return '';
+    const ds = (currentSkuEl.dataset && currentSkuEl.dataset.fullSku) ? currentSkuEl.dataset.fullSku : '';
+    return ds || currentSkuEl.title || ((currentSkuEl.value && currentSkuEl.value !== '(none)') ? currentSkuEl.value : '');
+  }
+
+  function updateCreateButtonState() {
+    if (!btnCreateSkuFolder) return;
+    const hasHandle = !!WJN_WORKDIR_HANDLE;
+    const hasSku = !!getCurrentSkuFull();
+    btnCreateSkuFolder.disabled = !(hasHandle && hasSku);
+  }
+
+  async function ensureWorkdirPermission() {
+    if (!WJN_WORKDIR_HANDLE) return false;
+    try {
+      if (WJN_WORKDIR_HANDLE.requestPermission) {
+        const perm = await WJN_WORKDIR_HANDLE.requestPermission({ mode: 'readwrite' });
+        return perm === 'granted';
+      }
+      if (WJN_WORKDIR_HANDLE.queryPermission) {
+        const perm2 = await WJN_WORKDIR_HANDLE.queryPermission({ mode: 'readwrite' });
+        return perm2 === 'granted';
+      }
+    } catch(_) {}
+    return true; // Best effort
+  }
+
+  function workingPathPreviewParts() {
+    const base = WJN_WORKDIR_LABEL || '';
+    const sku = getCurrentSkuFull();
+    const suffix = (skuSuffixInput && skuSuffixInput.value) ? skuSuffixInput.value : getSuffix();
+    const append = sku ? `${sku}${suffix ? ' ' + suffix : ''}` : '';
+    return { base, append };
+  }
+
+  function renderWorkingDisplay() {
+    if (!workingDisplay) return;
+    if (!WJN_WORKDIR_LABEL) {
+      workingDisplay.textContent = "Not set, press 'Home' to open settings";
+      updateCreateButtonState();
+      return;
+    }
+    const { base, append } = workingPathPreviewParts();
+    const baseHtml = `<span class="wbase">${escapeHtml(base)}</span>`;
+    const appendHtml = append ? `/`+`<span class="wnew">${escapeHtml(append)}</span>` : '';
+    workingDisplay.innerHTML = baseHtml + appendHtml;
+    updateCreateButtonState();
+  }
+
+  async function chooseWorkingFolder() {
+    try {
+      if (!window.showDirectoryPicker) {
+        alert('This browser does not support choosing a local folder. Try Chrome/Edge.');
+        return;
+      }
+      const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      WJN_WORKDIR_HANDLE = handle;
+      WJN_WORKDIR_LABEL = handle.name || 'Selected folder';
+      try { await idbPut('handles', 'working', handle); } catch(_) {}
+      if (workingFolderInput) workingFolderInput.value = WJN_WORKDIR_LABEL;
+      renderWorkingDisplay();
+      log('Working folder selected: ' + WJN_WORKDIR_LABEL, 'success');
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;
+      log('Failed to choose folder: ' + (e?.message || e), 'error');
+    }
+  }
+
+  async function restoreWorkingFolder() {
+    try {
+      const handle = await idbGet('handles', 'working');
+      if (handle) {
+        WJN_WORKDIR_HANDLE = handle;
+        WJN_WORKDIR_LABEL = handle.name || 'Selected folder';
+        if (workingFolderInput) workingFolderInput.value = WJN_WORKDIR_LABEL;
+      }
+    } catch(_) {}
+    renderWorkingDisplay();
+  }
+
+  async function createSkuFolder() {
+    const sku = getCurrentSkuFull();
+    if (!sku) { log('No current SKU to create folder for.', 'warning'); return; }
+    if (!WJN_WORKDIR_HANDLE && !navigator.storage?.getDirectory) {
+      log('No working folder set and no fallback available.', 'error');
+      return;
+    }
+    const suffix = skuSuffixInput && skuSuffixInput.value ? skuSuffixInput.value : getSuffix();
+    const folderName = sku + (suffix ? ' ' + suffix : '');
+    try {
+      if (WJN_WORKDIR_HANDLE) {
+        const ok = await ensureWorkdirPermission();
+        if (!ok) { log('Permission denied to write in the selected folder.', 'error'); return; }
+        await WJN_WORKDIR_HANDLE.getDirectoryHandle(folderName, { create: true });
+        log('Created folder: ' + WJN_WORKDIR_LABEL + '/' + folderName, 'success');
+      } else {
+        const root = await navigator.storage.getDirectory();
+        const base = await root.getDirectoryHandle('WJN_WORKING', { create: true });
+        await base.getDirectoryHandle(folderName, { create: true });
+        log('Created folder in app storage: WJN_WORKING/' + folderName, 'success');
+      }
+    } catch (e) {
+      log('Failed to create folder: ' + (e?.message || e), 'error');
+    }
+  }
+
+
   // Helpers to keep UI responsive and consistent
   function isTextInputFocused() {
     const ae = document.activeElement;
@@ -177,6 +346,7 @@ function setCurrentSku(sku) {
     try { currentSkuEl.dataset.fullSku = sku || ''; } catch (_) {}
     // Reflect current state into favorites enable/disable
     try { renderFavorites(); } catch (_) {}
+    try { renderWorkingDisplay(); } catch(_) {}
   }
 
   function getCurrentSkuFull() {
@@ -852,6 +1022,16 @@ function setCurrentSku(sku) {
     window.addEventListener('resize', adjustConsoleHeight);
     
     log('Copy a SKU (Vendor-ID) to the clipboard and click Search or press F9.', 'hint');
+
+      // Restore working folder and suffix, and wire events
+      restoreWorkingFolder();
+      if (skuSuffixInput) {
+        try { skuSuffixInput.value = getSuffix(); } catch(_) {}
+        skuSuffixInput.addEventListener('input', () => { renderWorkingDisplay(); });
+        skuSuffixInput.addEventListener('blur', () => { saveSuffix(skuSuffixInput.value || ''); });
+      }
+      if (chooseWorkingFolderBtn) chooseWorkingFolderBtn.addEventListener('click', chooseWorkingFolder);
+      if (btnCreateSkuFolder) btnCreateSkuFolder.addEventListener('click', createSkuFolder);
 
     // Auto actions based on settings
     const settings = getSettings();

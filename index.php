@@ -9,14 +9,14 @@ require __DIR__.'/user_data.php';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Sofa Jobs Navigator® — Web</title>
-      <link rel="stylesheet" href="assets/style.css?v=22" />
+      <link rel="stylesheet" href="assets/style.css?v=25" />
     <link rel="icon" href="sofa_icon.ico" sizes="any">
     <link rel="icon" type="image/png" href="sofa_icon_128.png" sizes="128x128">
     <link rel="apple-touch-icon" href="sofa_icon.png">
   </head>
   <body>
-    <div class="app">
-      <header class="topbar">
+      <div class="app">
+        <header class="topbar">
         <div class="brand">
           <img src="logo.png" alt="Logo" class="logo" />
           <span class="title">Sofa Jobs Navigator® 2.0</span>
@@ -64,13 +64,24 @@ require __DIR__.'/user_data.php';
         </aside>
       </main>
 
-      <footer class="statusbar">
-        <div>Status: <span id="status" class="status <?php echo is_connected() ? 'online' : 'offline' ?>">
-          <?php echo is_connected() ? 'Online • '.htmlspecialchars(get_account_email() ?? '') : 'Offline' ?>
-        </span></div>
-        <div>Server time: <code><?php echo date('Y-m-d H:i:s'); ?></code></div>
-          <div class="version">v 2.0.19</div>
-      </footer>
+        <div class="statusbar workingbar">
+          <div class="working-left">
+            <span class="wlabel">Working Folder:</span>
+            <span id="workingDisplay" class="working-display">Not set, press 'Home' to open settings</span>
+          </div>
+          <div class="working-right">
+            <input id="skuSuffixInput" type="text" placeholder="Suffix (optional)" />
+            <button id="btnCreateSkuFolder" class="btn btn-primary" disabled>Create SKU Folder</button>
+          </div>
+        </div>
+        
+        <footer class="statusbar">
+          <div>Status: <span id="status" class="status <?php echo is_connected() ? 'online' : 'offline' ?>">
+            <?php echo is_connected() ? 'Online • '.htmlspecialchars(get_account_email() ?? '') : 'Offline' ?>
+          </span></div>
+          <div>Server time: <code><?php echo date('Y-m-d H:i:s'); ?></code></div>
+          <div class="version">v 2.0.22</div>
+        </footer>
     </div>
 
     <script>
@@ -79,36 +90,44 @@ require __DIR__.'/user_data.php';
       window.WJN_USER = <?php echo json_encode(get_user_info()); ?>;
     </script>
     
-    <!-- Settings Modal -->
-    <div id="settingsModal" class="modal" style="display: none;">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Settings</h3>
-          <button id="closeSettings" class="btn-close">&times;</button>
-        </div>
-        <div class="modal-body">
-          <h4>Customize Favorites</h4>
-          <div id="settingsOptions" class="settings-options">
-            <label><input type="checkbox" id="opt_sounds"> Sounds on/off</label>
-            <label><input type="checkbox" id="opt_auto_connect"> Auto-connect on/off</label>
-            <label><input type="checkbox" id="opt_auto_detect"> Auto-detect SKU on/off</label>
-            <label><input type="checkbox" id="opt_auto_load_multiple"> Auto load multiple recents (no prompt)</label>
-            <label><input type="checkbox" id="opt_open_root_on_detect"> Open root folder on SKU found</label>
-            <label><input type="checkbox" id="opt_show_welcome"> Show Welcome Window on Startup</label>
+      <!-- Settings Modal -->
+      <div id="settingsModal" class="modal" style="display: none;">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Settings</h3>
+            <button id="closeSettings" class="btn-close">&times;</button>
           </div>
-          <div id="favoritesEditor"></div>
-          <div class="settings-note">
-            <img src="path_warning.png" alt="Path format guidance" />
-            <p class="hint">Warning: make sure the path has the exact same pattern of the remote folders.</p>
-          </div>
-          <div class="modal-actions">
-            <button id="resetFavorites" class="btn">Reset to Default</button>
-            <button id="cancelSettings" class="btn">Cancel</button>
-            <button id="saveFavorites" class="btn btn-primary">Save Changes</button>
+          <div class="modal-body">
+            <h4>Customize Favorites</h4>
+            <div id="settingsOptions" class="settings-options">
+              <label><input type="checkbox" id="opt_sounds"> Sounds on/off</label>
+              <label><input type="checkbox" id="opt_auto_connect"> Auto-connect on/off</label>
+              <label><input type="checkbox" id="opt_auto_detect"> Auto-detect SKU on/off</label>
+              <label><input type="checkbox" id="opt_auto_load_multiple"> Auto load multiple recents (no prompt)</label>
+              <label><input type="checkbox" id="opt_open_root_on_detect"> Open root folder on SKU found</label>
+              <label><input type="checkbox" id="opt_show_welcome"> Show Welcome Window on Startup</label>
+            </div>
+            <div id="favoritesEditor"></div>
+            <div class="settings-note">
+              <img src="path_warning.png" alt="Path format guidance" />
+              <p class="hint">Warning: make sure the path has the exact same pattern of the remote folders.</p>
+            </div>
+            <div class="settings-separator"></div>
+            <div class="settings-working">
+              <div class="sw-label">Working Folder:</div>
+              <input id="workingFolderInput" type="text" placeholder="Select a folder to save your projects." readonly />
+              <button id="chooseWorkingFolder" class="btn">Choose</button>
+            </div>
+            <div class="settings-blank"></div>
+            <div class="settings-blank"></div>
+            <div class="modal-actions">
+              <button id="resetFavorites" class="btn">Reset to Default</button>
+              <button id="cancelSettings" class="btn">Cancel</button>
+              <button id="saveFavorites" class="btn btn-primary">Save Changes</button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
     <!-- Welcome Modal -->
     <div id="welcomeModal" class="modal" style="display:none;">
@@ -165,6 +184,6 @@ require __DIR__.'/user_data.php';
         </div>
       </div>
     </div>
-      <script src="assets/app.js?v=22"></script>
-  </body>
-</html>
+      <script src="assets/app.js?v=25"></script>
+    </body>
+  </html>

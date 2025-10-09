@@ -20,8 +20,8 @@ function load_user_data($userId) {
     
     $file = get_user_data_file($userId);
     if (!file_exists($file)) {
-        return [
-            'favorites' => [
+      return [
+          'favorites' => [
                 ['label' => 'Root Folder', 'path' => ''],
                 ['label' => 'Trailer / Video IN', 'path' => '02-TRAILER/VIDEO IN'],
                 ['label' => 'Artes', 'path' => 'EXPORT/03- ARTES'],
@@ -32,18 +32,19 @@ function load_user_data($userId) {
                 ['label' => 'Entrega', 'path' => 'EXPORT/04- ENTREGAS'],
             ],
             'recent_skus' => [],
-            'settings' => [
-                'theme' => 'dark',
-                'console_font_size' => 11,
-                'max_recent_skus' => 20,
-                'sounds' => true,
-                'auto_connect' => false,
-                'auto_detect' => true,
-                'auto_load_multiple' => false,
-                'open_root_on_detect' => false,
-                'show_welcome_on_startup' => false
-            ]
-        ];
+          'settings' => [
+              'theme' => 'dark',
+              'console_font_size' => 11,
+              'max_recent_skus' => 20,
+              'sounds' => true,
+              'auto_connect' => false,
+              'auto_detect' => true,
+              'auto_load_multiple' => false,
+              'open_root_on_detect' => false,
+              'show_welcome_on_startup' => false,
+              'sku_suffix' => ''
+          ]
+      ];
     }
     
     $data = json_decode(file_get_contents($file), true);
@@ -77,7 +78,7 @@ function save_user_settings($userId, $settings) {
         $data['settings'] = [];
     }
     // Whitelist expected keys
-    $allowed = ['theme','console_font_size','max_recent_skus','sounds','auto_connect','auto_detect','auto_load_multiple','open_root_on_detect','show_welcome_on_startup'];
+  $allowed = ['theme','console_font_size','max_recent_skus','sounds','auto_connect','auto_detect','auto_load_multiple','open_root_on_detect','show_welcome_on_startup','sku_suffix'];
     foreach ($settings as $k => $v) {
         if (in_array($k, $allowed, true)) {
             $data['settings'][$k] = $v;
