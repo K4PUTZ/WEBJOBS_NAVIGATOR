@@ -1,6 +1,6 @@
 # WEBJOBS_NAVIGATOR_PHP Versioning System
 
-## Current Version: 2.0.17
+## Current Version: 2.0.19
 
 ### Versioning Guidelines for AI Assistants
 
@@ -10,6 +10,8 @@
 - **Z (Patch)**: Bug fixes, small tweaks, minor improvements
 
 ### Version History:
+- **v2.0.19** - Settings modal: bottom Cancel closes without saving; Esc/overlay/X show save confirmation and keep editing on Cancel
+- **v2.0.18** - Settings modal: overlay/Escape/X now prompt to save if changed; removed outside-click lock; added dirty tracking
 - **v2.0.17** - Re-render favorites when Current SKU changes to enable buttons correctly
 - **v2.0.16** - Recents click resets context + copies SKU; favorites use full SKU, not truncated; bumped cache-busters
 - **v2.0.15** - Drive query escaping fix; consolidated renderFavorites; incremental upload workflow docs

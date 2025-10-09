@@ -561,7 +561,7 @@ function setCurrentSku(sku) {
     }
   }
 
-  function openSettings() {
+    function openSettings() {
     
     const modal = $('#settingsModal');
     const editor = $('#favoritesEditor');
@@ -574,20 +574,20 @@ function setCurrentSku(sku) {
       editor.classList.add('favorites-editor');
     }
     
-    // Populate options UI (static container)
-    const settings = getSettings();
-    if (optsBox) {
-      const map = {
-        opt_sounds: 'sounds',
-        opt_auto_connect: 'auto_connect',
-        opt_auto_detect: 'auto_detect',
-        opt_auto_load_multiple: 'auto_load_multiple'
-      };
-      Object.keys(map).forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.checked = !!settings[map[id]];
-      });
-    }
+      // Populate options UI (static container)
+      const settings = getSettings();
+      if (optsBox) {
+        const map = {
+          opt_sounds: 'sounds',
+          opt_auto_connect: 'auto_connect',
+          opt_auto_detect: 'auto_detect',
+          opt_auto_load_multiple: 'auto_load_multiple'
+        };
+        Object.keys(map).forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.checked = !!settings[map[id]];
+        });
+      }
 
     // Populate favorites editor
     const normalize = (favs) => {
@@ -621,31 +621,57 @@ function setCurrentSku(sku) {
       editor.appendChild(item);
     });
     
-    // Show overlay and prevent background scroll/interactions
-    modal.style.display = 'flex';
-    document.body.classList.add('modal-open');
+      // Show overlay and prevent background scroll/interactions
+      modal.style.display = 'flex';
+      document.body.classList.add('modal-open');
+
+      // Initialize dirty tracking for Settings modal
+      try { window._WJN_SETTINGS_DIRTY = false; } catch(_) {}
+      const markDirty = () => { try { window._WJN_SETTINGS_DIRTY = true; } catch(_) {} };
+      if (editor) {
+        editor.addEventListener('input', markDirty);
+        editor.addEventListener('change', markDirty);
+      }
+      // Track settings toggle changes
+      ['opt_sounds','opt_auto_connect','opt_auto_detect','opt_auto_load_multiple'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.addEventListener('change', markDirty);
+      });
 
     // Focus first input for quick editing
     const firstInput = editor.querySelector('input');
     if (firstInput) firstInput.focus();
 
     // Close on ESC
-    const onEsc = (e) => { if (e.key === 'Escape') { e.preventDefault(); closeSettings(); } };
-    document.addEventListener('keydown', onEsc);
-    window._WJN_ESC_HANDLER = onEsc;
-  }
+      const onEsc = (e) => { if (e.key === 'Escape') { e.preventDefault(); attemptCloseSettings(); } };
+      document.addEventListener('keydown', onEsc);
+      window._WJN_ESC_HANDLER = onEsc;
+    }
 
-  window.closeSettings = function() {
-    const modal = $('#settingsModal');
-    if (modal) {
-      modal.style.display = 'none';
+    window.closeSettings = function() {
+      const modal = $('#settingsModal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+      document.body.classList.remove('modal-open');
+      if (window._WJN_ESC_HANDLER) {
+        document.removeEventListener('keydown', window._WJN_ESC_HANDLER);
+        window._WJN_ESC_HANDLER = null;
+      }
     }
-    document.body.classList.remove('modal-open');
-    if (window._WJN_ESC_HANDLER) {
-      document.removeEventListener('keydown', window._WJN_ESC_HANDLER);
-      window._WJN_ESC_HANDLER = null;
+
+    // Attempt to close Settings, prompting to save if there are changes
+    function attemptCloseSettings() {
+      try {
+        if (!window._WJN_SETTINGS_DIRTY) { closeSettings(); return; }
+      } catch(_) { closeSettings(); return; }
+      const save = confirm('Save settings changes before closing?');
+      if (save) {
+        try { saveFavorites(); } catch (e) { try { log('Error saving settings: ' + (e?.message||e), 'error'); } catch(_) {} }
+      } else {
+        // Keep editing; do nothing
+      }
     }
-  }
+    window.attemptCloseSettings = attemptCloseSettings;
 
   window.removeFavorite = function(idx) {
     const editor = $('#favoritesEditor');
@@ -699,13 +725,14 @@ function setCurrentSku(sku) {
       });
       
       const data = await response.json();
-      if (data.success) {
-        window.USER_FAVORITES = favorites;
-        try { saveFavoritesToLocal(favorites); } catch (_) {}
-        renderFavorites();
-        closeSettings();
-        log('Favorites saved successfully.', 'success');
-      } else {
+        if (data.success) {
+          window.USER_FAVORITES = favorites;
+          try { saveFavoritesToLocal(favorites); } catch (_) {}
+          renderFavorites();
+          try { window._WJN_SETTINGS_DIRTY = false; } catch (_) {}
+          closeSettings();
+          log('Favorites saved successfully.', 'success');
+        } else {
         log('Failed to save favorites.', 'error');
       }
     } catch (error) {
@@ -777,19 +804,20 @@ function setCurrentSku(sku) {
     const settingsInlineBtn = $('#btnSettingsInline'); if (settingsInlineBtn) settingsInlineBtn.addEventListener('click', openSettings);
     const btnWelcome = $('#btnWelcome'); if (btnWelcome) btnWelcome.addEventListener('click', openWelcome);
     const btnAbout = $('#btnAbout'); if (btnAbout) btnAbout.addEventListener('click', openAbout);
-    $('#btnClearRecents').addEventListener('click', clearRecents);
-    $('#closeSettings').addEventListener('click', closeSettings);
-    const cancelBtn = $('#cancelSettings'); if (cancelBtn) cancelBtn.addEventListener('click', closeSettings);
+      $('#btnClearRecents').addEventListener('click', clearRecents);
+      $('#closeSettings').addEventListener('click', attemptCloseSettings);
+      const cancelBtn = $('#cancelSettings'); if (cancelBtn) cancelBtn.addEventListener('click', closeSettings);
     $('#saveFavorites').addEventListener('click', saveFavorites);
     
-    // Close modal when clicking outside
-    // Keep modal persistent: ignore outside clicks
-    const overlay = $('#settingsModal');
-    if (overlay) {
-      overlay.addEventListener('click', (e) => {
-        // no-op to keep modal open on outside clicks
-      });
-    }
+      // Close modal when clicking outside (overlay)
+      const overlay = $('#settingsModal');
+      if (overlay) {
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) {
+            attemptCloseSettings();
+          }
+        });
+      }
     const welcomeOverlay = $('#welcomeModal');
     if (welcomeOverlay) {
       welcomeOverlay.addEventListener('click', (e) => {});

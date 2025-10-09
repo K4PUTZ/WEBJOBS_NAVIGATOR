@@ -9,7 +9,7 @@ require __DIR__.'/user_data.php';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Sofa Jobs Navigator® — Web</title>
-      <link rel="stylesheet" href="assets/style.css?v=20" />
+      <link rel="stylesheet" href="assets/style.css?v=22" />
     <link rel="icon" href="sofa_icon.ico" sizes="any">
     <link rel="icon" type="image/png" href="sofa_icon_128.png" sizes="128x128">
     <link rel="apple-touch-icon" href="sofa_icon.png">
@@ -69,7 +69,7 @@ require __DIR__.'/user_data.php';
           <?php echo is_connected() ? 'Online • '.htmlspecialchars(get_account_email() ?? '') : 'Offline' ?>
         </span></div>
         <div>Server time: <code><?php echo date('Y-m-d H:i:s'); ?></code></div>
-          <div class="version">v 2.0.17</div>
+          <div class="version">v 2.0.19</div>
       </footer>
     </div>
 
@@ -165,6 +165,6 @@ require __DIR__.'/user_data.php';
         </div>
       </div>
     </div>
-      <script src="assets/app.js?v=20"></script>
+      <script src="assets/app.js?v=22"></script>
   </body>
 </html>
