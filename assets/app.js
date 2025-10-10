@@ -230,16 +230,16 @@
     /[A-Z0-9_]+_\d{4}_TT\d{7,8}_S\d{3}_E\d{3}/g,
   ];
 
-  const DEFAULT_FAVORITES = [
-    { label: 'Root Folder', path: '' },
-    { label: 'Trailer / Video IN', path: '02-TRAILER/VIDEO IN' },
-    { label: 'Artes', path: 'EXPORT/03- ARTES' },
-    { label: 'Marketing / Social', path: 'EXPORT/03- ARTES/06- MARKETING/SOCIAL' },
-    { label: 'Envio Direto', path: 'EXPORT/03- ARTES/03- ENVIO DIRETO PLATAFORMA' },
-    { label: 'Legendas', path: 'EXPORT/02- LEGENDAS' },
-    { label: 'Temp', path: 'TEMP' },
-    { label: 'Entrega', path: 'EXPORT/04- ENTREGAS' },
-  ];
+    const DEFAULT_FAVORITES = [
+      { label: 'Root Folder', path: '' },
+      { label: 'Trailer / Video IN', path: '02-TRAILER/VIDEO IN' },
+      { label: 'Artes Produção', path: '07-ARTES/ARTE EM PRODUÇÃO' },
+      { label: 'Poster Itunes', path: 'EXPORT/03- ARTES/02- POSTER/Itunes' },
+      { label: 'Envio Direto', path: 'EXPORT/03- ARTES/03- ENVIO DIRETO PLATAFORMA' },
+      { label: 'Legendas', path: 'EXPORT/02- LEGENDAS' },
+      { label: 'Temp', path: 'TEMP' },
+      { label: '', path: '' },
+    ];
 
   function escapeHtml(s){
     return String(s)
@@ -301,7 +301,7 @@
         const raw = localStorage.getItem('wjn_settings');
         if (raw) return JSON.parse(raw);
       } catch {}
-      return { sounds:true, auto_connect:false, auto_detect:true, auto_load_multiple:false, show_welcome_on_startup:true };
+      return { sounds:true, auto_connect:false, auto_detect:true, auto_load_multiple:false, open_root_on_detect:true, show_welcome_on_startup:true };
     }
   function play(kind){
     const s = getSettings();
@@ -484,30 +484,28 @@ function setCurrentSku(sku) {
     }
   }
 
-  async function resolveSkuPath(sku, path) {
-    if (!window.WJN_CONNECTED) {
-      log('Not connected to Google Drive. Click Connect first.', 'warning');
-      return null;
-    }
-    
-    try {
-      const response = await fetch('api.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `action=resolve_path&sku=${encodeURIComponent(sku)}&path=${encodeURIComponent(path || '')}`
-      });
-      
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'API request failed');
+    async function resolveSkuPath(sku, path) {
+      if (!window.WJN_CONNECTED) {
+        log('Not connected to Google Drive. Click Connect first.', 'warning');
+        return null;
       }
       
-      return data;
-    } catch (error) {
-      log(`Drive API error: ${error.message}`, 'error');
-      return null;
+      try {
+        const response = await fetch('api.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `action=resolve_path&sku=${encodeURIComponent(sku)}&path=${encodeURIComponent(path || '')}`
+        });
+        
+        const data = await response.json();
+        if (!response.ok) {
+          return { error: (data && data.error) ? data.error : 'API request failed' };
+        }
+        return data; // { drive_url, ... }
+      } catch (error) {
+        return { error: (error && error.message) ? error.message : 'error' };
+      }
     }
-  }
   
   function googleSearchUrl(sku, path) {
     const q = encodeURIComponent((path ? path + ' ' : '') + sku);
@@ -526,20 +524,18 @@ function setCurrentSku(sku) {
     
     log(`Resolving: ${fav.label || 'Favorite'} → ${path || '/'} for ${sku}...`);
     
-    // Try to resolve exact folder first if connected
-    if (window.WJN_CONNECTED) {
-      const result = await resolveSkuPath(sku, path);
-      if (result && result.drive_url) {
-        window.open(result.drive_url, '_blank');
-        log(`Opened: ${fav.label || 'Favorite'} → ${result.drive_url}`, 'success');
+      // Try to resolve exact folder first if connected
+      if (window.WJN_CONNECTED) {
+        const result = await resolveSkuPath(sku, path);
+        if (result && result.drive_url) {
+          window.open(result.drive_url, '_blank');
+          log(`Opened: ${fav.label || 'Favorite'} → ${result.drive_url}`, 'success');
+          return;
+        }
+        // No folder found → simple error message (no search fallback)
+        log('Remote folder not found.', 'error');
         return;
       }
-    }
-    
-    // Fallback to search
-    const url = googleSearchUrl(sku, path);
-    window.open(url, '_blank');
-    log(`Search fallback: ${fav.label || 'Favorite'} → ${path || '/'} for ${sku}`, 'success');
   }
 
   async function handleClipboardScan() {
@@ -670,7 +666,7 @@ function setCurrentSku(sku) {
         renderFavorites();
       }
         if (data.settings) {
-          window.USER_SETTINGS = Object.assign({ sounds:true, auto_connect:false, auto_detect:true, auto_load_multiple:false, open_root_on_detect:false, show_welcome_on_startup:true, sku_suffix:'' }, data.settings);
+          window.USER_SETTINGS = Object.assign({ sounds:true, auto_connect:false, auto_detect:true, auto_load_multiple:false, open_root_on_detect:true, show_welcome_on_startup:true, sku_suffix:'' }, data.settings);
           try { localStorage.setItem('wjn_settings', JSON.stringify(window.USER_SETTINGS)); } catch(_) {}
         }
       if (data.recent_skus) {
@@ -917,7 +913,7 @@ function setCurrentSku(sku) {
     async function saveSettings(settings){
       try {
         const current = (window.USER_SETTINGS) ? window.USER_SETTINGS : (function(){ try { return JSON.parse(localStorage.getItem('wjn_settings')||'{}'); } catch(_) { return {}; } })();
-        const defaults = { sounds:true, auto_connect:false, auto_detect:true, auto_load_multiple:false, open_root_on_detect:false, show_welcome_on_startup:true, sku_suffix:'' };
+        const defaults = { sounds:true, auto_connect:false, auto_detect:true, auto_load_multiple:false, open_root_on_detect:true, show_welcome_on_startup:true, sku_suffix:'' };
         window.USER_SETTINGS = Object.assign({}, defaults, current || {}, settings || {});
         localStorage.setItem('wjn_settings', JSON.stringify(window.USER_SETTINGS));
         if (window.WJN_CONNECTED) {
@@ -1050,13 +1046,8 @@ function setCurrentSku(sku) {
     }
   }
 
-  // Allow plain number keys 1..8 to open favorites when not typing
-  document.addEventListener('keydown', (e) => {
-    if (!isTextInputFocused() && !e.ctrlKey && !e.metaKey && !e.altKey && /^[1-8]$/.test(e.key)) {
-      e.preventDefault();
-      try { openFavorite(parseInt(e.key, 10) - 1); } catch (_) {}
-    }
-  });
+    // Note: number keys 1..8 are already handled in initKeys();
+    // avoid adding a second global handler to prevent double execution.
 
   document.addEventListener('DOMContentLoaded', () => {
     try { updateStatusFromWindow(); } catch (_) {}
@@ -1251,7 +1242,10 @@ function setCurrentSku(sku) {
             rowTop.appendChild(btn);
             const rowChk = document.createElement('div'); rowChk.className='row';
             const lb = document.createElement('label');
-            const cb = document.createElement('input'); cb.type='checkbox'; cb.id='wz_auto_connect'; cb.checked=!!getSettings().auto_connect; lb.appendChild(cb); lb.appendChild(document.createTextNode('Connect on startup'));
+            const cb = document.createElement('input'); cb.type='checkbox'; cb.id='wz_auto_connect';
+            // Offer auto-connect checked by default on page 1, regardless of current settings
+            cb.checked = true;
+            lb.appendChild(cb); lb.appendChild(document.createTextNode('Connect on startup'));
             rowChk.appendChild(lb);
             c.appendChild(p); c.appendChild(rowTop); c.appendChild(rowChk);
           } },

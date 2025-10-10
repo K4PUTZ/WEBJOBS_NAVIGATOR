@@ -1,6 +1,6 @@
 # WEBJOBS_NAVIGATOR_PHP Versioning System
 
-## Current Version: 2.0.35
+## Current Version: 2.0.39
 
 ### Versioning Guidelines for AI Assistants
 
@@ -26,6 +26,10 @@
 - **v2.0.33** - Layout: main grid stretches to bottom; status bar pinned; Recent SKUs and Console extend to fill available height
 - **v2.0.34** - Recent SKUs: removed numbering; list now unstyled and left-aligned
 - **v2.0.35** - Favorites header: added right-aligned hint “Press the number to activate.”
+- **v2.0.36** - Fixed duplicate favorite triggers on number keys by removing a second global keydown listener
+- **v2.0.37** - Removed Google Drive search fallback; when a remote folder is missing, log “Remote folder not found.” with error chime
+- **v2.0.38** - New defaults for new users: toggles = Sounds:on, Auto-detect:on, Open-root:on, Auto-connect:off, Auto-load-multiple:off, Show Welcome:on; favorites updated (Trailer / Video IN, Artes Produção, Poster Itunes, Envio Direto, Legendas, Temp)
+- **v2.0.39** - Wizard page 1: auto-connect checkbox shown checked by default (independent of current settings); choice saved when clicking Next
 - **v2.0.18** - Settings modal: overlay/Escape/X now prompt to save if changed; removed outside-click lock; added dirty tracking
 - **v2.0.17** - Re-render favorites when Current SKU changes to enable buttons correctly
 - **v2.0.16** - Recents click resets context + copies SKU; favorites use full SKU, not truncated; bumped cache-busters

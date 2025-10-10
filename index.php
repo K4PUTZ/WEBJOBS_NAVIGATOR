@@ -80,7 +80,7 @@ require __DIR__.'/user_data.php';
               <?php echo is_connected() ? 'Online • '.htmlspecialchars(get_account_email() ?? '') : 'Offline' ?>
             </span></div>
             <div>Server time: <code><?php echo date('Y-m-d H:i:s'); ?></code></div>
-            <div class="version">v 2.0.35</div>
+            <div class="version">v 2.0.39</div>
           </div>
         </footer>
     </div>
@@ -185,6 +185,6 @@ require __DIR__.'/user_data.php';
         </div>
       </div>
     </div>
-      <script src="assets/app.js?v=32"></script>
+      <script src="assets/app.js?v=35"></script>
     </body>
   </html>

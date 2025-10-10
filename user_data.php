@@ -20,17 +20,17 @@ function load_user_data($userId) {
     
     $file = get_user_data_file($userId);
     if (!file_exists($file)) {
-      return [
-          'favorites' => [
-                ['label' => 'Root Folder', 'path' => ''],
-                ['label' => 'Trailer / Video IN', 'path' => '02-TRAILER/VIDEO IN'],
-                ['label' => 'Artes', 'path' => 'EXPORT/03- ARTES'],
-                ['label' => 'Marketing / Social', 'path' => 'EXPORT/03- ARTES/06- MARKETING/SOCIAL'],
-                ['label' => 'Envio Direto', 'path' => 'EXPORT/03- ARTES/03- ENVIO DIRETO PLATAFORMA'],
-                ['label' => 'Legendas', 'path' => 'EXPORT/02- LEGENDAS'],
-                ['label' => 'Temp', 'path' => 'TEMP'],
-                ['label' => 'Entrega', 'path' => 'EXPORT/04- ENTREGAS'],
-            ],
+          return [
+              'favorites' => [
+                  ['label' => 'Root Folder', 'path' => ''],
+                  ['label' => 'Trailer / Video IN', 'path' => '02-TRAILER/VIDEO IN'],
+                  ['label' => 'Artes Produção', 'path' => '07-ARTES/ARTE EM PRODUÇÃO'],
+                  ['label' => 'Poster Itunes', 'path' => 'EXPORT/03- ARTES/02- POSTER/Itunes'],
+                  ['label' => 'Envio Direto', 'path' => 'EXPORT/03- ARTES/03- ENVIO DIRETO PLATAFORMA'],
+                  ['label' => 'Legendas', 'path' => 'EXPORT/02- LEGENDAS'],
+                  ['label' => 'Temp', 'path' => 'TEMP'],
+                  ['label' => '', 'path' => ''],
+              ],
             'recent_skus' => [],
           'settings' => [
               'theme' => 'dark',
@@ -40,11 +40,11 @@ function load_user_data($userId) {
               'auto_connect' => false,
               'auto_detect' => true,
               'auto_load_multiple' => false,
-              'open_root_on_detect' => false,
+                  'open_root_on_detect' => true,
                   'show_welcome_on_startup' => true,
-              'sku_suffix' => ''
-          ]
-      ];
+                  'sku_suffix' => ''
+              ]
+          ];
     }
     
     $data = json_decode(file_get_contents($file), true);
