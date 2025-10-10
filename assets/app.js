@@ -1395,13 +1395,16 @@ function setCurrentSku(sku) {
       }
     }
 
-  function openAbout() {
-    const modal = document.getElementById('aboutModal');
-    if (!modal) return;
-    modal.style.display = 'flex';
-    document.body.classList.add('modal-open');
-    const close = document.getElementById('closeAbout'); if (close) close.onclick = closeAbout;
-  }
+    function openAbout() {
+      const modal = document.getElementById('aboutModal');
+      if (!modal) return;
+      const verEl = document.getElementById('aboutVer');
+      try { if (verEl) verEl.textContent = (document.querySelector('.statusbar .version')?.textContent || '').trim(); } catch(_) {}
+      modal.style.display = 'flex';
+      document.body.classList.add('modal-open');
+      const close = document.getElementById('closeAbout'); if (close) close.onclick = closeAbout;
+      const close2 = document.getElementById('aboutCloseBtn'); if (close2) close2.onclick = closeAbout;
+    }
   function closeAbout() {
     const modal = document.getElementById('aboutModal');
     if (!modal) return;

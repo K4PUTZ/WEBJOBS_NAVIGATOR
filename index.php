@@ -9,7 +9,7 @@ require __DIR__.'/user_data.php';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Sofa Jobs Navigator® — Web</title>
-      <link rel="stylesheet" href="assets/style.css?v=31" />
+      <link rel="stylesheet" href="assets/style.css?v=32" />
     <link rel="icon" href="sofa_icon.ico" sizes="any">
     <link rel="icon" type="image/png" href="sofa_icon_128.png" sizes="128x128">
     <link rel="apple-touch-icon" href="sofa_icon.png">
@@ -22,15 +22,15 @@ require __DIR__.'/user_data.php';
           <span class="title">Sofa Jobs Navigator® 2.0</span>
         </div>
         <nav class="toolbar">
-          <button id="btnWelcome" class="tool">Welcome (F1)</button>
-          <button id="btnClipboard" class="tool" title="F9">Check Clipboard</button>
-          <button id="btnAbout" class="tool">About</button>
+          <button id="btnWelcome" class="tool"><span class="icon">👋</span> Welcome (F1)</button>
+          <button id="btnClipboard" class="tool" title="F9"><span class="icon">📋</span> Check Clipboard</button>
+          <button id="btnAbout" class="tool"><span class="icon">ℹ️</span> About</button>
           <?php if (is_connected()): ?>
-            <a class="tool" href="logout.php">Sign out</a>
+            <a class="tool" href="logout.php"><span class="icon">🚪</span> Sign out</a>
           <?php else: ?>
-            <a class="tool" href="auth.php">Connect</a>
+            <a class="tool" href="auth.php"><span class="icon">🔐</span> Connect</a>
           <?php endif; ?>
-          
+          <button id="btnSettings" class="tool"><span class="icon">⚙️</span> Settings (Home)</button>
         </nav>
       </header>
 
@@ -52,7 +52,7 @@ require __DIR__.'/user_data.php';
           </div>
 
           <div class="card">
-            <h4>Favorites <button id="btnSettingsInline" class="btn" title="Home"><span class="icon">⚙️</span> Settings (Home)</button></h4>
+            <h4>Favorites</h4>
             <div id="favorites" class="fav-list"></div>
 
           </div>
@@ -72,15 +72,15 @@ require __DIR__.'/user_data.php';
             </div>
             <div class="working-right">
               <input id="skuSuffixInput" type="text" placeholder="Suffix (optional)" />
-              <button id="btnCreateSkuFolder" class="btn btn-primary" disabled>Create SKU Folder</button>
-            </div>
+            <button id="btnCreateSkuFolder" class="btn btn-primary" disabled><span class="icon">📁</span> Create SKU Folder</button>
           </div>
+        </div>
           <div class="status-row">
             <div>Status: <span id="status" class="status <?php echo is_connected() ? 'online' : 'offline' ?>">
               <?php echo is_connected() ? 'Online • '.htmlspecialchars(get_account_email() ?? '') : 'Offline' ?>
             </span></div>
             <div>Server time: <code><?php echo date('Y-m-d H:i:s'); ?></code></div>
-            <div class="version">v 2.0.30</div>
+            <div class="version">v 2.0.32</div>
           </div>
         </footer>
     </div>
@@ -156,18 +156,30 @@ require __DIR__.'/user_data.php';
 
     <!-- About Modal -->
     <div id="aboutModal" class="modal" style="display:none;">
-      <div class="modal-content about-content">
+      <div class="modal-content about-panel">
         <div class="modal-header">
           <h3>About</h3>
           <button id="closeAbout" class="btn-close">&times;</button>
         </div>
         <div class="modal-body">
-          <div class="about-body">
-            <img class="about-logo" src="welcome/Sofa.png" alt="Sofa" />
-            <div class="about-text">
-              <p>Sofa Jobs Navigator® — Web Edition</p>
-              <p>Tools to detect SKUs and jump to Google Drive folders quickly.</p>
-              <p>Use F1 for Welcome, F9 to Search, and Home for Settings.</p>
+          <div class="about-wrap">
+            <div class="about-top">
+              <img src="logo.png" alt="Logo" class="about-top-logo" />
+              <div class="about-title">Sofa Jobs Navigator® <span id="aboutVer" class="about-ver"></span></div>
+              <div class="about-sep"></div>
+            </div>
+            <div class="about-info">
+              <p>Mateus O. S. Ribeiro</p>
+              <p>GPT‑5 Agent generated</p>
+              <p><?php echo date('F Y'); ?></p>
+              <p>Sofa Digital</p>
+              <p>All Rights Reserved</p>
+            </div>
+            <div class="about-sofa">
+              <img src="welcome/Sofa.png" alt="Sofa" class="about-sofa-img" />
+            </div>
+            <div class="row-right">
+              <button id="aboutCloseBtn" class="btn">Close</button>
             </div>
           </div>
         </div>

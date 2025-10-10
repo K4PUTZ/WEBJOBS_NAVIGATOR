@@ -24,6 +24,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple
 .toolbar .tool { margin-left: 8px; background: transparent; color: var(--text); border: 1px solid #444; padding: 6px 10px; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; height: 32px; line-height: 1; font-size: 14px; }
 .toolbar .tool:link, .toolbar .tool:visited { color: var(--text); text-decoration: none; }
 .toolbar .tool:hover { border-color: #666; }
+.tool .icon { margin-right: 6px; }
 .grid { display: grid; grid-template-columns: 3fr 1fr; gap: 12px; }
 .card { background: var(--panel); border: 1px solid #3a3a3a; border-radius: 8px; padding: 10px; }
 .console-header { margin-bottom: 10px; }
@@ -264,11 +265,17 @@ body.modal-open {
 .pager { color: var(--muted); font-family: ui-monospace, monospace; }
 .welcome-options h4 { margin: 0 0 8px 0; }
 
-/* About modal */
-.about-content { max-width: 680px; }
-.about-body { display: flex; align-items: center; gap: 16px; }
-.about-logo { width: 120px; height: auto; border-radius: 8px; border: 1px solid #3a3a3a; background: #111; }
-.about-text p { margin: 6px 0; }
+/* About modal (new) */
+.about-panel { width: 520px; max-width: 95vw; }
+.about-wrap { display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px; }
+.about-top { text-align: left; }
+.about-top-logo { height: 18px; width: auto; }
+.about-title { margin-top: 8px; font-weight: 600; }
+.about-ver { font-family: ui-monospace, monospace; color: var(--muted); }
+.about-sep { border-top: 1px solid #3a3a3a; margin-top: 6px; opacity: 0.9; }
+.about-info p { margin: 4px 0; }
+.about-sofa { display: flex; justify-content: flex-end; }
+.about-sofa-img { width: 200px; height: auto; border-radius: 8px; border: 0; }
 
 /* Header action buttons in card titles */
 .card h4 .btn { font-size: 12px; padding: 4px 8px; }
