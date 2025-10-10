@@ -8,10 +8,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOCAL_DIR="$ROOT_DIR/WEBJOBS_NAVIGATOR_PHP"
 
 # ------------------ Config ------------------
-: "${FTP_HOST:=195.179.238.91}"
+: "${FTP_HOST:?Set FTP_HOST}"
 : "${FTP_PORT:=21}"
-: "${FTP_USER:=u343523827}"
-: "${FTP_PASS:=3s>C]t32ZdSJ!a.}"
+: "${FTP_USER:?Set FTP_USER}"
+: "${FTP_PASS:?Set FTP_PASS}"
 : "${FTP_REMOTE:=public_html/jobs_navigator}"
 : "${VERIFY_URL:=https://www.mateusribeiro.com/jobs_navigator/}"
 

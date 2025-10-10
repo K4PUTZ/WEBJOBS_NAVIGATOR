@@ -4,7 +4,16 @@ require __DIR__ . '/config.php';
 require __DIR__ . '/user_data.php';
 
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
+// Restrictive CORS: allow only trusted origins (otherwise same-origin)
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$self = $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+if ($origin && in_array($origin, ALLOWED_ORIGINS, true)) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Vary: Origin');
+} else {
+    header('Access-Control-Allow-Origin: ' . $self);
+}
 header('Access-Control-Allow-Methods: GET, POST');
 header('Access-Control-Allow-Headers: Content-Type');
 

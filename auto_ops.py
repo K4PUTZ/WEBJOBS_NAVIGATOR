@@ -75,9 +75,11 @@ def bump_versions(dry: bool = False) -> VersionChange:
 
 
 def _ftp_connect() -> ftplib.FTP:
-    host = os.getenv('FTP_HOST', '195.179.238.91')
-    user = os.getenv('FTP_USER', 'u343523827')
-    passwd = os.getenv('FTP_PASS', '3s>C]t32ZdSJ!a.')
+    host = os.getenv('FTP_HOST')
+    user = os.getenv('FTP_USER')
+    passwd = os.getenv('FTP_PASS')
+    if not host or not user or not passwd:
+        raise RuntimeError('Set FTP_HOST, FTP_USER, FTP_PASS environment variables')
     port = int(os.getenv('FTP_PORT', '21'))
     ftp = ftplib.FTP()
     ftp.connect(host, port, timeout=30)

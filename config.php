@@ -1,8 +1,22 @@
 <?php
 declare(strict_types=1);
 
-// Start session for token storage
+// Start session for token storage with secure cookie flags
 if (session_status() !== PHP_SESSION_ACTIVE) {
+  $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+  if (PHP_VERSION_ID >= 70300) {
+    session_set_cookie_params([
+      'lifetime' => 0,
+      'path' => '/',
+      'domain' => '',
+      'secure' => $secure,
+      'httponly' => true,
+      'samesite' => 'Lax',
+    ]);
+  } else {
+    // Best-effort for older versions
+    session_set_cookie_params(0, '/; samesite=Lax', '', $secure, true);
+  }
   // Set a custom session save path if the default doesn't work
   $session_path = sys_get_temp_dir();
   if (is_writable($session_path)) {
@@ -21,6 +35,14 @@ define('SCOPES', [
   'https://www.googleapis.com/auth/drive',
   'openid', 'email', 'profile'
 ]);
+
+// CORS allowed origins (production domain list)
+if (!defined('ALLOWED_ORIGINS')) {
+  define('ALLOWED_ORIGINS', [
+    'https://www.mateusribeiro.com',
+    'https://mateusribeiro.com'
+  ]);
+}
 
 // Build absolute URL helper
 function base_url(): string {
@@ -66,4 +88,3 @@ function get_account_email(): ?string {
 function is_connected(): bool {
   return load_token() !== null && get_account_email() !== null;
 }
-

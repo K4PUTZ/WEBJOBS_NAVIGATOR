@@ -15,11 +15,11 @@ if [ ! -f "$FILE" ]; then
     exit 1
 fi
 
-# FTP credentials
-FTP_HOST="195.179.238.91"
-FTP_USER="u343523827"
-FTP_PASS="3s>C]t32ZdSJ!a."
-FTP_REMOTE="jobs_navigator"
+# FTP credentials (set via env)
+: "${FTP_HOST:?Set FTP_HOST}"
+: "${FTP_USER:?Set FTP_USER}"
+: "${FTP_PASS:?Set FTP_PASS}"
+: "${FTP_REMOTE:=jobs_navigator}"
 
 echo "🚀 Uploading $FILE to server..."
 

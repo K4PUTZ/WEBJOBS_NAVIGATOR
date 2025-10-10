@@ -15,9 +15,9 @@ Upload from your machine (safe approach)
 1) Set environment variables (avoid putting your password in shell history):
 
    macOS/Linux (bash/zsh):
-   export FTP_HOST=195.179.238.91
-   export FTP_USER='u343523827'
-   export FTP_PASS='3s>C]t32ZdSJ!a.'
+   export FTP_HOST=YOUR_FTP_HOST
+   export FTP_USER='YOUR_FTP_USER'
+   export FTP_PASS='YOUR_FTP_PASSWORD'
    export FTP_REMOTE='public_html/jobs_navigator'
 
 2) Using curl (plain FTP):

@@ -26,6 +26,10 @@ if (isset($token['error'])) {
 }
 $client->setAccessToken($token);
 save_token($client->getAccessToken());
+// Regenerate session ID after login to prevent fixation
+if (function_exists('session_regenerate_id')) {
+  @session_regenerate_id(true);
+}
 
 // Fetch profile email for status bar
 try {
@@ -41,4 +45,3 @@ try {
 // Redirect back to app root
 header('Location: ' . base_url());
 exit;
-
