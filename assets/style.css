@@ -74,6 +74,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple
 .statusbar.stacked { flex-direction: column; align-items: stretch; gap: 6px; }
 .status-row { display: flex; align-items: center; gap: 12px; width: 100%; }
 .statusbar .version { margin-left: auto; }
+.statusbar .visits { font-family: ui-monospace, monospace; color: var(--muted); }
 .status.offline { color: var(--muted); }
 .status.online { color: var(--green); }
 .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }

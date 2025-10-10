@@ -2,6 +2,39 @@
 declare(strict_types=1); 
 require __DIR__.'/config.php'; 
 require __DIR__.'/user_data.php';
+// Universal visit counter (stored under user_data/)
+function wjn_increment_visit_counter(): int {
+  $file = __DIR__ . '/user_data/visit_counter.txt';
+  $dir = dirname($file);
+  if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
+  $count = 0;
+  $fp = @fopen($file, 'c+');
+  if ($fp) {
+    if (@flock($fp, LOCK_EX)) {
+      $data = stream_get_contents($fp);
+      $count = (int)trim($data ?: '0');
+      $count++;
+      ftruncate($fp, 0);
+      rewind($fp);
+      fwrite($fp, (string)$count);
+      fflush($fp);
+      flock($fp, LOCK_UN);
+    } else {
+      // Fallback without lock
+      $count = (int)@file_get_contents($file);
+      $count++;
+      @file_put_contents($file, (string)$count, LOCK_EX);
+    }
+    fclose($fp);
+  } else {
+    // Fallback if file can't open
+    $count = (int)@file_get_contents($file);
+    $count++;
+    @file_put_contents($file, (string)$count, LOCK_EX);
+  }
+  return $count;
+}
+$_WJN_VISITS = wjn_increment_visit_counter();
 ?>
 <!doctype html>
 <html lang="en">
@@ -76,13 +109,14 @@ require __DIR__.'/user_data.php';
           </div>
         </div>
           <div class="status-row">
-            <div>Status: <span id="status" class="status <?php echo is_connected() ? 'online' : 'offline' ?>">
-              <?php echo is_connected() ? 'Online • '.htmlspecialchars(get_account_email() ?? '') : 'Offline' ?>
-            </span></div>
-            <div>Server time: <code><?php echo date('Y-m-d H:i:s'); ?></code></div>
-            <div class="version">v 2.0.39</div>
-          </div>
-        </footer>
+          <div>Status: <span id="status" class="status <?php echo is_connected() ? 'online' : 'offline' ?>">
+            <?php echo is_connected() ? 'Online • '.htmlspecialchars(get_account_email() ?? '') : 'Offline' ?>
+          </span></div>
+          <div>Server time: <code><?php echo date('Y-m-d H:i:s'); ?></code></div>
+          <div class="version">v 2.0.41</div>
+          <div class="visits">- <?php echo sprintf('%05d', (int)($_WJN_VISITS ?? 0)); ?></div>
+        </div>
+      </footer>
     </div>
 
     <script>
