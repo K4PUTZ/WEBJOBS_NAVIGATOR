@@ -340,12 +340,13 @@ body.modal-open {
   .settings-blank { height: 12px; }
 
 /* Welcome Wizard (new) */
-.welcome-wizard { width: 600px; height: 700px; max-width: 95vw; max-height: 92vh; }
-.wwrap { display: grid; grid-template-rows: auto auto auto auto 1fr auto; gap: 10px; }
+.welcome-wizard { width: 600px; height: 700px; max-width: 95vw; max-height: 92vh; display: flex; flex-direction: column; }
+.welcome-wizard .modal-body { flex: 1; display: flex; flex-direction: column; }
+.wwrap { display: grid; grid-template-rows: auto auto auto auto 1fr auto; gap: 10px; height: 100%; }
 .wz-image { display: flex; justify-content: center; align-items: center; }
 .wz-image img { max-width: 90%; height: auto; border-radius: 6px; }
 .wz-text { text-align: center; color: var(--text); white-space: pre-wrap; }
-.wz-sep { border-top: 1px solid #3a3a3a; margin: 8px auto 0; width: 92%; opacity: 0.9; }
+.wz-sep { border-top: 1px solid #3a3a3a; margin: 8px auto 0; width: 92%; opacity: 0.9; padding-bottom: 8px; }
 .wz-controls { display: grid; justify-content: center; gap: 8px; color: var(--text); }
 .wz-controls .row { display: flex; justify-content: center; gap: 8px; }
 .wz-controls label { display: inline-flex; align-items: center; gap: 8px; }

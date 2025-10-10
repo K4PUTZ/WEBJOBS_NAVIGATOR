@@ -1338,6 +1338,24 @@ function setCurrentSku(sku) {
       nextBtn.textContent = (idx === WZ_CONFIG.length - 1) ? 'Finish' : 'Next';
     }
 
+    async function wzCanProceed() {
+      // Page 1 -> 2: require connection (or confirm skip)
+      if (WZ_STATE.idx === 0) {
+        if (!window.WJN_CONNECTED) {
+          const msg = "You are not connected to Google Drive. You won't be able to search remote folders until you connect.\n\nProceed without connecting now? You can press Home later to open Settings and connect.";
+          const proceed = confirm(msg);
+          if (!proceed) return false;
+        }
+      }
+      // Page 6 -> 7: warn if no working folder, then proceed
+      if (WZ_STATE.idx === 5) {
+        if (!WJN_WORKDIR_HANDLE) {
+          alert("Without a Working Folder you won't be able to create SKU folders in one click.\n\nYou can press Home later to open Settings and configure it.");
+        }
+      }
+      return true;
+    }
+
     function openWelcome() {
       const modal = document.getElementById('welcomeModal');
       if (!modal) return;
@@ -1349,7 +1367,12 @@ function setCurrentSku(sku) {
       const nextBtn = document.getElementById('wzNext');
       const closeBtn = document.getElementById('closeWelcome');
       if (prevBtn) prevBtn.onclick = ()=>{ WZ_STATE.idx=Math.max(0, WZ_STATE.idx-1); wzRender(); };
-      if (nextBtn) nextBtn.onclick = ()=>{ wzApplyCurrentPage(); if (WZ_STATE.idx < WZ_CONFIG.length-1) { WZ_STATE.idx++; wzRender(); } else { closeWelcome(); } };
+      if (nextBtn) nextBtn.onclick = async ()=>{
+        const ok = await wzCanProceed();
+        if (!ok) return; // stay on current page
+        wzApplyCurrentPage();
+        if (WZ_STATE.idx < WZ_CONFIG.length-1) { WZ_STATE.idx++; wzRender(); } else { closeWelcome(); }
+      };
       if (closeBtn) closeBtn.onclick = attemptCloseWelcome;
       // overlay dismiss
       modal.addEventListener('click', (e)=>{ if (e.target===modal) attemptCloseWelcome(); });
