@@ -9,7 +9,7 @@ require __DIR__.'/user_data.php';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Sofa Jobs Navigator® — Web</title>
-      <link rel="stylesheet" href="assets/style.css?v=33" />
+      <link rel="stylesheet" href="assets/style.css?v=35" />
     <link rel="icon" href="sofa_icon.ico" sizes="any">
     <link rel="icon" type="image/png" href="sofa_icon_128.png" sizes="128x128">
     <link rel="apple-touch-icon" href="sofa_icon.png">
@@ -52,7 +52,7 @@ require __DIR__.'/user_data.php';
           </div>
 
           <div class="card">
-            <h4>Favorites</h4>
+            <h4>Favorites <span class="hint">Press the number to activate.</span></h4>
             <div id="favorites" class="fav-list"></div>
 
           </div>
@@ -80,7 +80,7 @@ require __DIR__.'/user_data.php';
               <?php echo is_connected() ? 'Online • '.htmlspecialchars(get_account_email() ?? '') : 'Offline' ?>
             </span></div>
             <div>Server time: <code><?php echo date('Y-m-d H:i:s'); ?></code></div>
-          <div class="version">v 2.0.33</div>
+            <div class="version">v 2.0.35</div>
           </div>
         </footer>
     </div>

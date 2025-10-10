@@ -1,6 +1,6 @@
 # WEBJOBS_NAVIGATOR_PHP Versioning System
 
-## Current Version: 2.0.33
+## Current Version: 2.0.35
 
 ### Versioning Guidelines for AI Assistants
 
@@ -24,6 +24,8 @@
 - **v2.0.31** - Redesigned About window (logo, version, separator, Sofa.png) and moved Settings to main toolbar with icons; toolbar buttons/icons added (Welcome, About, Check Clipboard, Connect/Sign out, Create SKU Folder)
 - **v2.0.32** - Removed Settings button from Favorites panel; toolbar Settings label now reads “Settings (Home)”
 - **v2.0.33** - Layout: main grid stretches to bottom; status bar pinned; Recent SKUs and Console extend to fill available height
+- **v2.0.34** - Recent SKUs: removed numbering; list now unstyled and left-aligned
+- **v2.0.35** - Favorites header: added right-aligned hint “Press the number to activate.”
 - **v2.0.18** - Settings modal: overlay/Escape/X now prompt to save if changed; removed outside-click lock; added dirty tracking
 - **v2.0.17** - Re-render favorites when Current SKU changes to enable buttons correctly
 - **v2.0.16** - Recents click resets context + copies SKU; favorites use full SKU, not truncated; bumped cache-busters
