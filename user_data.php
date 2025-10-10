@@ -41,7 +41,7 @@ function load_user_data($userId) {
               'auto_detect' => true,
               'auto_load_multiple' => false,
               'open_root_on_detect' => false,
-              'show_welcome_on_startup' => false,
+                  'show_welcome_on_startup' => true,
               'sku_suffix' => ''
           ]
       ];

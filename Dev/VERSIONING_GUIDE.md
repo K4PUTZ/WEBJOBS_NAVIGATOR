@@ -1,6 +1,6 @@
 # WEBJOBS_NAVIGATOR_PHP Versioning System
 
-## Current Version: 2.0.25
+## Current Version: 2.0.28
 
 ### Versioning Guidelines for AI Assistants
 
@@ -16,6 +16,9 @@
 - **v2.0.23** - Unified status bars into a single container with two rows (Working Folder row + Status row) without changing behavior
 - **v2.0.24** - Working Folder label/path enlarged to 14px; status row remains 12px
 - **v2.0.25** - Rebuilt Welcome Window as a 7-step wizard with images, text, options bound to Settings, pager dots, Prev/Next/Finish, and cancel confirmation
+- **v2.0.26** - Wizard page 7 adds “Show Welcome on Startup”; persists to settings and auto-opens on load by default
+- **v2.0.27** - Fixed inconsistency: saving from Settings now persists Show Welcome/Open Root and doesn’t overwrite wizard preferences; both UIs stay in sync
+- **v2.0.28** - Wizard page 7 now suggests Show Welcome unchecked by default; it only updates settings when Finish is pressed. Defaults for new users remain ON via Settings.
 - **v2.0.18** - Settings modal: overlay/Escape/X now prompt to save if changed; removed outside-click lock; added dirty tracking
 - **v2.0.17** - Re-render favorites when Current SKU changes to enable buttons correctly
 - **v2.0.16** - Recents click resets context + copies SKU; favorites use full SKU, not truncated; bumped cache-busters

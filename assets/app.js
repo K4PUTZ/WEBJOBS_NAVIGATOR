@@ -295,14 +295,14 @@
     tone(660, 120, 0.035);
     setTimeout(() => tone(880, 120, 0.03), 90);
   }
-  function getSettings(){
-    try {
-      if (window.USER_SETTINGS) return window.USER_SETTINGS;
-      const raw = localStorage.getItem('wjn_settings');
-      if (raw) return JSON.parse(raw);
-    } catch {}
-    return { sounds:true, auto_connect:false, auto_detect:true, auto_load_multiple:false };
-  }
+    function getSettings(){
+      try {
+        if (window.USER_SETTINGS) return window.USER_SETTINGS;
+        const raw = localStorage.getItem('wjn_settings');
+        if (raw) return JSON.parse(raw);
+      } catch {}
+      return { sounds:true, auto_connect:false, auto_detect:true, auto_load_multiple:false, show_welcome_on_startup:true };
+    }
   function play(kind){
     const s = getSettings();
     if (!s || s.sounds === false) return;
@@ -669,10 +669,10 @@ function setCurrentSku(sku) {
         window.USER_FAVORITES = data.favorites;
         renderFavorites();
       }
-      if (data.settings) {
-        window.USER_SETTINGS = Object.assign({ sounds:true, auto_connect:false, auto_detect:true, auto_load_multiple:false }, data.settings);
-        try { localStorage.setItem('wjn_settings', JSON.stringify(window.USER_SETTINGS)); } catch(_) {}
-      }
+        if (data.settings) {
+          window.USER_SETTINGS = Object.assign({ sounds:true, auto_connect:false, auto_detect:true, auto_load_multiple:false, open_root_on_detect:false, show_welcome_on_startup:true, sku_suffix:'' }, data.settings);
+          try { localStorage.setItem('wjn_settings', JSON.stringify(window.USER_SETTINGS)); } catch(_) {}
+        }
       if (data.recent_skus) {
         // Update recent SKUs with user data
         localStorage.setItem('wjn_recents', JSON.stringify(data.recent_skus));
@@ -751,7 +751,9 @@ function setCurrentSku(sku) {
           opt_sounds: 'sounds',
           opt_auto_connect: 'auto_connect',
           opt_auto_detect: 'auto_detect',
-          opt_auto_load_multiple: 'auto_load_multiple'
+          opt_auto_load_multiple: 'auto_load_multiple',
+          opt_open_root_on_detect: 'open_root_on_detect',
+          opt_show_welcome: 'show_welcome_on_startup'
         };
         Object.keys(map).forEach(id => {
           const el = document.getElementById(id);
@@ -854,12 +856,14 @@ function setCurrentSku(sku) {
   async function saveFavorites() {
     const inputs = $$('#favoritesEditor input');
     // Gather settings toggles
-    const settings = {
-      sounds: !!$('#opt_sounds')?.checked,
-      auto_connect: !!$('#opt_auto_connect')?.checked,
-      auto_detect: !!$('#opt_auto_detect')?.checked,
-      auto_load_multiple: !!$('#opt_auto_load_multiple')?.checked,
-    };
+      const settings = {
+        sounds: !!$('#opt_sounds')?.checked,
+        auto_connect: !!$('#opt_auto_connect')?.checked,
+        auto_detect: !!$('#opt_auto_detect')?.checked,
+        auto_load_multiple: !!$('#opt_auto_load_multiple')?.checked,
+        open_root_on_detect: !!$('#opt_open_root_on_detect')?.checked,
+        show_welcome_on_startup: !!$('#opt_show_welcome')?.checked,
+      };
     await saveSettings(settings);
     const byIndex = {};
     inputs.forEach(input => {
@@ -910,19 +914,21 @@ function setCurrentSku(sku) {
     }
   }
 
-  async function saveSettings(settings){
-    try {
-      window.USER_SETTINGS = Object.assign({ sounds:true, auto_connect:false, auto_detect:true, auto_load_multiple:false }, settings||{});
-      localStorage.setItem('wjn_settings', JSON.stringify(window.USER_SETTINGS));
-      if (window.WJN_CONNECTED) {
-        await fetch('user_api.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: `action=save_settings&settings=${encodeURIComponent(JSON.stringify(window.USER_SETTINGS))}`
-        });
-      }
-    } catch (e) { console.log('Failed to save settings:', e); }
-  }
+    async function saveSettings(settings){
+      try {
+        const current = (window.USER_SETTINGS) ? window.USER_SETTINGS : (function(){ try { return JSON.parse(localStorage.getItem('wjn_settings')||'{}'); } catch(_) { return {}; } })();
+        const defaults = { sounds:true, auto_connect:false, auto_detect:true, auto_load_multiple:false, open_root_on_detect:false, show_welcome_on_startup:true, sku_suffix:'' };
+        window.USER_SETTINGS = Object.assign({}, defaults, current || {}, settings || {});
+        localStorage.setItem('wjn_settings', JSON.stringify(window.USER_SETTINGS));
+        if (window.WJN_CONNECTED) {
+          await fetch('user_api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `action=save_settings&settings=${encodeURIComponent(JSON.stringify(window.USER_SETTINGS))}`
+          });
+        }
+      } catch (e) { console.log('Failed to save settings:', e); }
+    }
 
   function resetToDefaults() {
     // Reset option toggles to defaults (sounds on, auto-detect on)
@@ -1268,9 +1274,13 @@ function setCurrentSku(sku) {
             row.appendChild(inp); row.appendChild(btn); c.appendChild(row);
           } },
         { img: 'welcome/welcome7.png', text: texts[6], key: 'sounds', build: (c)=>{
-            const lb=document.createElement('label'); const cb=document.createElement('input'); cb.type='checkbox'; cb.id='wz_sounds'; cb.checked=(getSettings().sounds!==false); lb.appendChild(cb); lb.appendChild(document.createTextNode('Sound on'));
+            const lb=document.createElement('label'); const cb=document.createElement('input'); cb.type='checkbox'; cb.id='wz_sounds'; cb.checked=(getSettings().sounds!==false); lb.appendChild(cb); lb.appendChild(document.createTextNode('Sounds On'));
+            const lb2=document.createElement('label'); const cb2=document.createElement('input'); cb2.type='checkbox'; cb2.id='wz_show_welcome';
+            // Suggestion: unchecked by default on page 7, regardless of current settings
+            cb2.checked = false;
+            lb2.appendChild(cb2); lb2.appendChild(document.createTextNode('Show Welcome on Startup'));
             const tip=document.createElement('div'); tip.className='wz-tip'; tip.innerHTML='💡 Tip: press F1 anytime to reopen this wizard.';
-            c.appendChild(lb); c.appendChild(tip);
+            c.appendChild(lb); c.appendChild(lb2); c.appendChild(tip);
           } },
       ];
     })();
@@ -1285,7 +1295,10 @@ function setCurrentSku(sku) {
       if (idx === 1) { patch.auto_detect = !!document.getElementById('wz_auto_detect')?.checked; }
       if (idx === 2) { patch.open_root_on_detect = !!document.getElementById('wz_open_root')?.checked; }
       if (idx === 4) { patch.auto_load_multiple = !!document.getElementById('wz_auto_multi')?.checked; }
-      if (idx === 6) { patch.sounds = !!document.getElementById('wz_sounds')?.checked; }
+      if (idx === 6) {
+        patch.sounds = !!document.getElementById('wz_sounds')?.checked;
+        patch.show_welcome_on_startup = !!document.getElementById('wz_show_welcome')?.checked;
+      }
       if (Object.keys(patch).length) {
         saveSettings(Object.assign({}, getSettings(), patch));
         // Reflect into Settings modal if open
@@ -1295,6 +1308,7 @@ function setCurrentSku(sku) {
           if ('open_root_on_detect' in patch) { const el=document.getElementById('opt_open_root_on_detect'); if (el) el.checked=!!patch.open_root_on_detect; }
           if ('auto_load_multiple' in patch) { const el=document.getElementById('opt_auto_load_multiple'); if (el) el.checked=!!patch.auto_load_multiple; }
           if ('sounds' in patch) { const el=document.getElementById('opt_sounds'); if (el) el.checked=!!patch.sounds; }
+          if ('show_welcome_on_startup' in patch) { const el=document.getElementById('opt_show_welcome'); if (el) el.checked=!!patch.show_welcome_on_startup; }
         } catch(_) {}
       }
     }
